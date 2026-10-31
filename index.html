@@ -64,7 +64,9 @@ function setupBridge(){
   const frame=$('gasBridge');
   frame.src=GAS_EXEC_URL+(GAS_EXEC_URL.includes('?')?'&':'?')+'bridge=1';
   window.addEventListener('message',event=>{
-    if(event.source!==frame.contentWindow || !event.data || event.data.channel!==CHANNEL)return;
+    const host = (()=>{try{return new URL(event.origin).hostname}catch(e){return ''}})();
+    const trustedGasOrigin = host === 'script.google.com' || host === 'script.googleusercontent.com' || host.endsWith('.script.googleusercontent.com');
+    if(!trustedGasOrigin || event.source!==frame.contentWindow || !event.data || event.data.channel!==CHANNEL)return;
     if(event.data.type==='ready'){
       state.bridgeReady=true;setStatus('雲端已連線');loadPublic();return;
     }
