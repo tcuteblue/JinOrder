@@ -96,7 +96,7 @@ const state = {
   publicData:null, surveys:[], admin:false, token:'', adminTab:'surveys',
   activeSurvey:null, editingResponse:null, identity:null, lookupSurveyId:'',
   adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
-  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePending:new Map(), bridgeNonce:'', requestNo:0
+  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
 };
 let deferredInstallPrompt = null;
 const $ = id => document.getElementById(id);
@@ -116,8 +116,13 @@ function makeBridgeNonce(){
 }
 function isTrustedGasOrigin(origin){
   try{
-    const host=new URL(origin).hostname;
-    return host==='script.google.com'||host==='script.googleusercontent.com'||host.endsWith('.script.googleusercontent.com');
+    const host=new URL(origin).hostname.toLowerCase();
+    // Apps Script HTML Service 的實際 sandbox host 常是 n-xxxx-0lu-script.googleusercontent.com，
+    // 注意它前面是連字號，不是 .script.googleusercontent.com。
+    return host==='script.google.com'||
+      host==='script.googleusercontent.com'||
+      host.endsWith('.script.googleusercontent.com')||
+      /^[a-z0-9-]+-script\.googleusercontent\.com$/.test(host);
   }catch(e){return false}
 }
 function setupBridge(){
@@ -128,25 +133,30 @@ function setupBridge(){
   const nonce=makeBridgeNonce();
   state.bridgeNonce=nonce;
 
-  // 先註冊監聽，再載入 GAS，避免載入很快時漏接 ready 訊息。
+  // 收到 GAS 內層 sandbox frame 傳來的 MessagePort 後，後續 API 全走該 Port。
+  // 這可避免 GitHub 只把訊息送到 GAS 外層 iframe、內層 userCodeAppPanel 收不到的巢狀 iframe 問題。
   window.addEventListener('message',event=>{
     if(!isTrustedGasOrigin(event.origin)||!event.data||event.data.channel!==CHANNEL||event.data.nonce!==nonce)return;
     if(event.data.type==='ready'){
+      const port=event.ports&&event.ports[0];
+      if(!port){setStatus('GAS 橋接錯誤',false);renderError('GAS 已載入，但沒有提供安全訊息通道。請更新 GAS 後端至 v7.0.0。');return;}
+      if(state.bridgePort){try{state.bridgePort.close()}catch(e){}}
+      state.bridgePort=port;
+      state.bridgePort.onmessage=handleBridgePortMessage;
+      if(state.bridgePort.start)state.bridgePort.start();
       if(state.bridgeReady)return;
-      state.bridgeReady=true;setStatus('雲端已連線');loadPublic();return;
+      state.bridgeReady=true;
+      setStatus('雲端已連線');
+      loadPublic();
+      return;
     }
     if(event.data.type==='bridge_error'){
       setStatus('GAS 橋接錯誤',false);
-      renderError(event.data.error||'GAS 橋接頁未能啟動。請重新部署最新 Code.gs。');return;
-    }
-    if(event.data.type==='response'){
-      const pending=state.bridgePending.get(event.data.id);if(!pending)return;
-      clearTimeout(pending.timer);state.bridgePending.delete(event.data.id);
-      if(event.data.ok)pending.resolve(event.data.result);else pending.reject(new Error(event.data.error||'雲端服務發生錯誤'));
+      renderError(event.data.error||'GAS 橋接頁未能啟動。請重新部署最新 Code.gs。');
     }
   });
   frame.addEventListener('load',()=>{
-    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立連線…',false);
+    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立安全通道…',false);
   });
   frame.addEventListener('error',()=>{
     setStatus('GAS 載入失敗',false);
@@ -160,17 +170,30 @@ function setupBridge(){
   setTimeout(()=>{
     if(!state.bridgeReady){
       setStatus('連線逾時',false);
-      renderError('在 25 秒內沒有收到 GAS 橋接回覆。請先直接開啟 GAS 診斷網址（在 /exec 後加 ?health=1），確認部署是否為最新版本；再檢查網頁應用程式是否設為「以我執行」及「所有人均可存取」。');
+      renderError('GAS 橋接頁已發出載入請求，但 25 秒內沒有收到安全通道。請確認已將 GAS Code.gs 更新至 v7.0.0，並部署為「以我執行／所有人均可存取」。');
     }
   },25000);
 }
+function handleBridgePortMessage(event){
+  const data=event&&event.data;
+  if(!data||data.channel!==CHANNEL||data.nonce!==state.bridgeNonce)return;
+  if(data.type==='response'){
+    const pending=state.bridgePending.get(data.id);if(!pending)return;
+    clearTimeout(pending.timer);state.bridgePending.delete(data.id);
+    if(data.ok)pending.resolve(data.result);else pending.reject(new Error(data.error||'雲端服務發生錯誤'));
+  }
+}
 function api(method,...args){
   return new Promise((resolve,reject)=>{
-    if(!state.bridgeReady){reject(new Error('雲端連線尚未就緒，請稍候或重新整理。'));return;}
+    if(!state.bridgeReady||!state.bridgePort){reject(new Error('雲端連線尚未就緒，請稍候或重新整理。'));return;}
     const id='r'+(++state.requestNo)+'_'+Date.now();
     const timer=setTimeout(()=>{state.bridgePending.delete(id);reject(new Error('雲端回應逾時，請稍後再試。'));},45000);
     state.bridgePending.set(id,{resolve,reject,timer});
-    $('gasBridge').contentWindow.postMessage({channel:CHANNEL,nonce:state.bridgeNonce,type:'request',id,method,args},'*');
+    try{
+      state.bridgePort.postMessage({channel:CHANNEL,nonce:state.bridgeNonce,type:'request',id,method,args});
+    }catch(err){
+      clearTimeout(timer);state.bridgePending.delete(id);reject(err);
+    }
   });
 }
 
@@ -204,10 +227,10 @@ function initPwaInstall(){
   if(!btn)return;
   btn.textContent='📲 安裝為 APP';
   btn.addEventListener('click',installApp);
-  let previouslyInstalled=false;
-  try{previouslyInstalled=localStorage.getItem('jq_pwa_installed')==='1'}catch(e){}
-  if(isRunningStandalone()||previouslyInstalled){
-    if(isRunningStandalone())markPwaInstalled();
+  // 只在目前真的以獨立 App 模式執行時隱藏安裝按鈕。
+  // 不使用舊 localStorage 記錄判斷，避免使用者解除安裝後按鈕仍被永久隱藏。
+  if(isRunningStandalone()){
+    markPwaInstalled();
     hideInstallButton();return;
   }
   // 不是每個瀏覽器都會提供 beforeinstallprompt；未提供時仍保留手動安裝說明按鈕。
@@ -238,7 +261,7 @@ function renderHome(){
   const emptyMessage=hasAnySurvey
     ? '目前沒有問卷進行中，請稍後再來。所有已結束問卷仍可在下方查詢自己的回覆。'
     : '目前沒有問卷進行中，請稍後再來。管理者建立並開放問卷後，這裡就會自動顯示。';
-  $('main').innerHTML=`<section class="hero"><h2>每一個回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
+  $('main').innerHTML=`<section class="hero"><h2>每一份回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
     <section class="card"><div class="section-title"><span class="emoji">📝</span><h3>目前開放中的問卷</h3><span class="badge">${open.length} 份</span></div>
       ${open.length?`<div class="survey-grid">${open.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.description||'歡迎填寫本問卷')}</div></div><span class="badge">開放中</span></div><div class="survey-meta">建立時間：${esc(dateText(s.createdAt))}</div><div class="btn-row"><button class="btn btn-primary" onclick="openSurvey('${esc(s.id)}')">開始填寫</button><button class="btn btn-plain" onclick="openLookup('${esc(s.id)}')">查詢回覆</button></div></div>`).join('')}</div>`:`<div class="notice"><strong>目前沒有問卷進行中……</strong><br>${esc(emptyMessage)}</div>`}
     </section>
