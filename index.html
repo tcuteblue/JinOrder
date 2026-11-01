@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.0.0">
+  <meta name="jq-pwa-version" content="10.1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -148,15 +148,47 @@
 /* 部署完成後，將 GAS /exec 網址貼在下方，然後更新 GitHub Pages 的 index.html。 */
 const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxw-JED9O-aW_x39VIOZJYeTb4Ou57eito80nsnYcqR3YM4FMQH49XMa3lbTjALbg9klA/exec';
 const CHANNEL = 'JINORDER_SURVEY_RPC_V1';
+const PROFILE_STORAGE_KEY = 'jinorder_profile_v1';
+function readRememberedIdentity(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'null');
+    if(!saved||typeof saved!=='object')return null;
+    return {name:String(saved.name||''),phone:String(saved.phone||'')};
+  }catch(e){return null}
+}
+function rememberIdentity(profile){
+  const previous=state.identity||{name:'',phone:''};
+  const next={
+    name:profile&&profile.name!==undefined?String(profile.name):String(previous.name||''),
+    phone:profile&&profile.phone!==undefined?String(profile.phone):String(previous.phone||'')
+  };
+  state.identity=next;
+  try{
+    if(next.name||next.phone)localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(next));
+    else localStorage.removeItem(PROFILE_STORAGE_KEY);
+  }catch(e){/* 無痕模式或瀏覽器停用儲存空間時，仍可正常填寫問卷。 */}
+  return next;
+}
 const state = {
   publicData:null, surveys:[], admin:false, token:'', adminTab:'surveys',
-  activeSurvey:null, editingResponse:null, identity:null, lookupSurveyId:'',
+  activeSurvey:null, editingResponse:null, identity:readRememberedIdentity(), lookupSurveyId:'',
   adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
   logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
 };
 let deferredInstallPrompt = null;
 const $ = id => document.getElementById(id);
 if ($('logoImage') && window.__JQ_LOGO_URL__) $('logoImage').src = window.__JQ_LOGO_URL__;
+// 管理者入口：在左上角 Logo 連續點擊五次，即可開啟管理者登入視窗。
+$('logoTap').addEventListener('click',()=>{
+  state.logoClicks++;
+  clearTimeout(state.logoTimer);
+  state.logoTimer=setTimeout(()=>{state.logoClicks=0;},1800);
+  if(state.logoClicks>=5){
+    state.logoClicks=0;
+    clearTimeout(state.logoTimer);
+    if(state.admin){loadAdmin();}else{adminLoginDialog();}
+  }
+});
 const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => '$' + Number(n || 0).toLocaleString('zh-TW',{maximumFractionDigits:2});
 const dateText = value => { if(!value)return ''; const d=new Date(value); return isNaN(d.getTime())?String(value):d.toLocaleString('zh-TW',{hour12:false}); };
@@ -390,6 +422,10 @@ function renderSurveyForm(initialAnswers){
       ${s.status==='開放中'?`<button class="btn btn-primary btn-block" onclick="submitCurrentSurvey()">${editing?'儲存修改':'確認並送出'}</button>`:''}
       <button class="btn btn-secondary btn-block" style="margin-top:8px" onclick="openLookup('${esc(s.id)}')">查詢我的回覆</button>
     </section>`;
+  // 姓名與電話在輸入時即保存到本機瀏覽器，下次開啟問卷或查詢時自動帶入。
+  const saveProfileFields=()=>rememberIdentity({name:$('profileName')?.value||'',phone:$('profilePhone')?.value||''});
+  $('profileName').addEventListener('input',saveProfileFields);
+  $('profilePhone').addEventListener('input',saveProfileFields);
   document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);
   updateLiveTotal();
   $('questionForm').addEventListener('change',()=>{document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);updateLiveTotal();});
@@ -464,6 +500,7 @@ function updateLiveTotal(){const el=$('liveTotal');if(el)el.textContent=money(cu
 
 async function submitCurrentSurvey(){
   const profile={name:$('profileName').value.trim(),phone:$('profilePhone').value.trim()};
+  rememberIdentity(profile);
   if(!profile.name||!profile.phone){toast('請填寫姓名及電話');return;}
   const answers=collectAnswers();
   const total=currentAmount();
@@ -474,9 +511,9 @@ async function submitCurrentSurvey(){
     let result;
     if(isEdit)result=await api('editMyResponse',state.activeSurvey.id,profile,state.editingResponse.responseId,answers);
     else result=await api('submitResponse',state.activeSurvey.id,profile,answers);
-    if(result.duplicate){state.identity=profile;toast(result.message);openLookup(state.activeSurvey.id);return;}
+    if(result.duplicate){rememberIdentity(profile);toast(result.message);openLookup(state.activeSurvey.id);return;}
     if(!result.ok)throw new Error(result.message||'送出失敗');
-    state.identity=profile;state.editingResponse=null;
+    rememberIdentity(profile);state.editingResponse=null;
     const filled=renderFilledAnswersHtml(state.activeSurvey,answers);
     showModal(`<div style="text-align:center"><div style="font-size:50px">🎉</div><h3>${isEdit?'修改完成':'送出成功！'}</h3><p class="muted small">${esc(result.message||'資料已安全寫入雲端。')}</p><div class="notice success">回覆編號：<b>${esc(result.responseId||'已更新')}</b><br>金額：<b>${money(result.amount==null?total:result.amount)}</b></div><div class="order-card" style="text-align:left;margin-top:12px"><b>本次填寫明細</b>${filled}</div><button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();loadPublic()">完成</button></div>`);
   }catch(err){toast(err.message)}finally{setBusy(false)}
@@ -488,15 +525,19 @@ function openLookup(surveyId){
   state.lookupSurveyId=surveyId;
   const remembered=state.identity||{};
   showModal(`<h3>查詢我的回覆</h3><p class="small muted">請輸入填寫時使用的姓名及電話，兩者必須一致。</p><div class="field"><label>姓名</label><input id="lookupName" class="input" maxlength="60" value="${esc(remembered.name||'')}" placeholder="請輸入姓名"></div><div class="field"><label>手機／聯絡電話</label><input id="lookupPhone" class="input" inputmode="tel" maxlength="20" value="${esc(remembered.phone||'')}" placeholder="請輸入電話"></div><div id="lookupResult"></div><div class="btn-row"><button class="btn btn-primary" onclick="doLookup()">查詢</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);
+  const saveLookupFields=()=>rememberIdentity({name:$('lookupName')?.value||'',phone:$('lookupPhone')?.value||''});
+  $('lookupName').addEventListener('input',saveLookupFields);
+  $('lookupPhone').addEventListener('input',saveLookupFields);
 }
 async function doLookup(){
   const profile={name:$('lookupName').value.trim(),phone:$('lookupPhone').value.trim()};
+  rememberIdentity(profile);
   if(!profile.name||!profile.phone){toast('請輸入姓名及電話');return;}
   setBusy(true);
   try{
     const r=await api('lookupMyResponse',state.lookupSurveyId,profile);
     if(!r.found){$('lookupResult').innerHTML=`<div class="notice error">${esc(r.message||'查無資料')}</div>`;return;}
-    state.identity=profile;
+    rememberIdentity(profile);
     const surveyData=await api('getPublicSurvey',state.lookupSurveyId);state.activeSurvey=surveyData.survey;
     state.editingResponse=r.response;
     const s=state.activeSurvey,resp=r.response;
