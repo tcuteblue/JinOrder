@@ -1,30 +1,99 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFC928">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="工作室記帳">
-<meta name="application-name" content="工作室收入記帳">
-<meta name="description" content="工作室收入記帳－孩童收支、禮金與簡易記事管理">
-<title>工作室收入記帳</title>
-<script id="studio-dynamic-pwa-manifest">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFC928">
+  <meta name="jq-pwa-version" content="10.2.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="真好點">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" href="ico.png">
+  <link rel="apple-touch-icon" href="ico.png">
+  <meta name="application-name" content="真好點問卷系統">
+  <style>
+    :root{--yellow:#ffc928;--yellow2:#ffe58b;--orange:#ff8d3a;--pink:#ff7797;--green:#4dbb83;--blue:#69b8ed;--ink:#34302a;--muted:#827b70;--paper:#fffdf7;--line:#f0e6d0;--shadow:0 10px 28px rgba(109,82,20,.10)}
+    *{box-sizing:border-box}body{font-size:18px;margin:0;background:linear-gradient(160deg,#fff8df 0%,#fffdf8 42%,#fff1e6 100%);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;min-height:100vh}
+    button,input,textarea,select{font:inherit}button{cursor:pointer;border:0}button:disabled{opacity:.55;cursor:not-allowed}a{color:#246eae}
+    .app{max-width:900px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom))}
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}.logo{width:58px;height:58px;border-radius:19px;background:linear-gradient(145deg,#ffe578,#ffad30);display:grid;place-items:center;box-shadow:0 7px 15px #e8af3c55;user-select:none;touch-action:manipulation;flex:none;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:25px;margin:0;font-weight:950;letter-spacing:1px}.brand p{margin:3px 0 0;color:var(--muted);font-size:14px}.top-right{margin-left:auto;display:flex;align-items:center;gap:7px}.install-btn{padding:8px 10px;border-radius:99px;background:#fff3c6;border:1px solid #edc54c;color:#76520e;font-size:14px;font-weight:900;white-space:nowrap;box-shadow:0 3px 9px #c58b2220}.install-btn:active{transform:scale(.97)}.install-btn.installed{background:#e8f8ed;border-color:#b9dfc3;color:#27794a}.install-strip{display:flex;justify-content:flex-end;align-items:center;margin:-5px 0 13px}.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:800;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+    .hero{border-radius:26px;padding:23px;background:linear-gradient(125deg,#ffdc67,#ffb54e 55%,#ff9672);color:#573719;position:relative;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}.hero:after{content:"✦";position:absolute;right:24px;bottom:-36px;font-size:137px;opacity:.22;transform:rotate(18deg)}.hero h2{font-size:25px;margin:0 0 7px;max-width:78%;line-height:1.35}.hero p{font-size:15px;margin:0;max-width:77%;line-height:1.65}
+    .card{background:rgba(255,255,255,.95);border:1px solid rgba(242,226,190,.9);border-radius:22px;padding:18px;margin:14px 0;box-shadow:var(--shadow)}.card h3{margin:0 0 14px;font-size:19px}.section-title{display:flex;align-items:center;gap:8px}.section-title h3{margin:0}.emoji{font-size:24px}.muted{color:var(--muted)}.small{font-size:14px}.tiny{font-size:13px}.field{margin:13px 0}.field label,.field-label{display:block;font-weight:850;font-size:16px;margin-bottom:7px}.required{font-size:12px;color:#e45763;background:#fff0f0;padding:3px 7px;border-radius:99px;margin-left:6px}.optional{font-size:12px;color:#7a8b54;background:#f2f8e9;padding:3px 7px;border-radius:99px;margin-left:6px}
+    .input,.textarea,.select{width:100%;border:1.5px solid #e9dfcc;background:#fffefa;border-radius:13px;padding:12px 13px;outline:none;color:var(--ink);min-height:45px}.input:focus,.textarea:focus,.select:focus{border-color:#eab82f;box-shadow:0 0 0 3px #ffd95d35}.textarea{min-height:84px;resize:vertical}
+    .option-list{display:grid;gap:8px}.option{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #eee5d7;border-radius:14px;background:#fffefa}.option:has(input:checked){border-color:#f0be34;background:#fff9e5}.option input{accent-color:#e9a900;width:18px;height:18px}.option-name{flex:1;font-size:16px;font-weight:650}.price{font-size:15px;color:#d47b1c;font-weight:850}.qty-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qty{width:72px;text-align:center;padding:7px;border:1px solid #e9dfcc;border-radius:10px}.note-input{margin-top:8px;font-size:15px}
+    .btn{padding:12px 16px;border-radius:13px;font-weight:850;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,#ffc928,#ffad35);color:#503715;box-shadow:0 5px 13px #e6ad3438}.btn-secondary{background:#fff3ce;color:#795719}.btn-plain{background:#f7f3e9;color:#665c4d}.btn-danger{background:#fff0ee;color:#bd4c43}.btn-green{background:#e8f8ed;color:#27794a}.btn-blue{background:#e8f3ff;color:#286a9c}.btn-block{width:100%}.btn-row{display:flex;gap:9px;flex-wrap:wrap}.btn-row>*{flex:1;min-width:115px}.total-box{background:#fff6d9;border:1px dashed #efbf3d;padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;margin:14px 0}.total-box strong{font-size:27px;color:#c77b07}.notice{padding:12px 14px;border-radius:13px;background:#fff7df;color:#805e16;font-size:15px;line-height:1.65}.notice.error{background:#fff0ee;color:#b54e43}.notice.success{background:#eaf8ed;color:#28774a}.hidden{display:none!important}.divider{height:1px;background:var(--line);margin:14px 0}
+    .survey-card{border:1px solid #f0e3c8;border-radius:18px;padding:15px;margin:10px 0;background:linear-gradient(145deg,#fffefa,#fff9e9)}.survey-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.survey-head h3{margin:0 0 5px;font-size:18px}.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:13px;font-weight:850;background:#eaf8ed;color:#357849;white-space:nowrap}.badge.closed{background:#f2efeb;color:#81776b}.badge.draft{background:#eaf3ff;color:#326d9c}.survey-meta{color:var(--muted);font-size:13px;margin:8px 0 11px}
+    .admin-tabs{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin:0 0 12px}.tab{white-space:nowrap;padding:10px 13px;border-radius:12px;background:#f6f0e2;color:#75664f;font-weight:850;font-size:15px}.tab.active{background:#ffdd72;color:#60410d}
+    .question-editor{border:1px solid #eee3ce;border-radius:16px;padding:13px;margin:12px 0;background:#fffefa}.editor-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}.editor-head strong{flex:1}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.option-editor{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:6px;margin:7px 0}.option-editor input{min-width:0;padding:9px;border:1px solid #e8dfce;border-radius:10px}.mini-btn{border-radius:10px;background:#fff0ed;color:#ba5548;font-weight:900}.checkline{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}.checkline input{accent-color:#d99a16;width:17px;height:17px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px;background:#fff6df;border-radius:14px;text-align:center}.stat b{display:block;font-size:22px;color:#9b6c0a}.stat span{font-size:13px;color:#81745d}.order-card,.history-item{border:1px solid #eee3ce;border-radius:15px;padding:13px;margin:10px 0}.order-top{display:flex;gap:8px;align-items:center;justify-content:space-between}.amount{color:#c77b07;font-size:20px;font-weight:900}.answer-line{padding:7px 0;border-bottom:1px dashed #eee3ce;font-size:15px}.answer-line:last-child{border-bottom:0}.modal-backdrop{position:fixed;inset:0;background:#2d251b77;display:grid;place-items:center;padding:16px;z-index:30}.modal{width:min(100%,480px);max-height:90vh;overflow:auto;background:#fffdf7;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 13px}.toast{position:fixed;z-index:50;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 18px;background:#332d25;color:white;border-radius:99px;font-size:15px;box-shadow:var(--shadow);max-width:90%;text-align:center}.loading{opacity:.68;pointer-events:none}.footer{text-align:center;color:#a69b88;font-size:13px;padding:16px 0 4px}.back{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#80652b;padding:7px 0;font-weight:800}.link{background:none;color:#2475b8;padding:0;text-decoration:underline;font-size:14px}
+
+    /* v10 商品／數量題：商品與客製化數量使用大型 +/- 控制器 */
+    .product-qty-panel{border:1.5px solid #f1dfb8;background:#fffaf0;border-radius:16px;padding:13px;margin:10px 0}
+    .product-price-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-weight:850}
+    .product-price-line strong{font-size:20px;color:#c77b07}
+    .qty-control{display:flex;align-items:center;gap:10px;flex:none}
+    .qty-control button{width:44px;height:44px;border-radius:12px;background:#fff0c6;color:#76520e;font-size:25px;font-weight:950;box-shadow:0 3px 0 #e8c66e;line-height:1}
+    .qty-control button:disabled{opacity:.35;box-shadow:none}
+    .qty-control input.qty-value{width:76px;height:46px;border:2px solid #e8c96f;border-radius:12px;background:#fff;text-align:center;font-size:22px;font-weight:950;color:#4e3b16;padding:4px}
+    .qty-control input.qty-value:disabled{background:#f3f0e8;color:#aaa}
+    .qty-control.compact button{width:40px;height:40px;font-size:23px}
+    .qty-control.compact input.qty-value{width:68px;height:42px;font-size:20px}
+    .customization-list{border-top:1px dashed #e9d9b4;margin-top:13px;padding-top:11px}
+    .customization-list h4{font-size:15px;margin:0 0 8px;color:#735726}
+    .customization-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f1eadb}
+    .customization-row:last-child{border-bottom:0}
+    .customization-info{min-width:0;flex:1}.customization-info strong{font-size:16px}.customization-info .tiny{display:block;margin-top:3px}
+    .item-product-note{margin-top:12px}
+    .option-editor.custom-option-editor{grid-template-columns:minmax(0,1fr) 82px 78px 36px}
+    .shop-summary-wrap{overflow-x:auto}
+    .shop-summary{width:100%;border-collapse:collapse;min-width:450px;font-size:14px}
+    .shop-summary th,.shop-summary td{padding:9px 8px;border-bottom:1px solid #eee3ce;text-align:left;white-space:nowrap}
+    .shop-summary th{background:#fff4d5;color:#6d4d13}
+    .shop-summary td.money-cell{text-align:right;font-weight:800;color:#9d650e}
+    .shop-summary tfoot td{font-weight:950;background:#fff9e9}
+    .sync-status{font-size:12px;color:#8a7a5e;min-height:16px;margin:-7px 4px 9px;line-height:1.4}
+    .sync-status:empty{display:none}
+    .sync-status.error{color:#b85b4d}
+    .sync-status.syncing{color:#8a6a21}
+
+    /* 已安裝並以 App 獨立視窗開啟時，立即隱藏整個安裝區。 */
+    @media all and (display-mode: standalone){#installStrip{display:none!important}}
+    @media all and (display-mode: fullscreen){#installStrip{display:none!important}}
+    #gasBridge{position:absolute;width:1px;height:1px;left:-10000px;top:-10000px;border:0;opacity:0;pointer-events:none}
+    @media(min-width:680px){.app{padding-top:24px}.hero{padding:29px}.hero h2{font-size:29px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .field{margin:6px 0 12px}.survey-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.survey-grid .survey-card{margin:0}.admin-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}.admin-layout .card{margin:0}}
+  </style>
+
+<script id="jq-dynamic-pwa-manifest">
 (function(){
   "use strict";
-  // 完全沿用「真好點問卷系統 v7.1」的單檔 PWA 寫法：
-  // 圖示直接使用 GitHub Pages 根目錄的 ico.png；Manifest 仍由 Blob 動態建立，不需要 manifest.json 或 sw.js。
-  const icon192 = new URL('./ico.png', window.location.href).href;
-  const icon512 = new URL('./ico.png', window.location.href).href;
-  const svgFallback = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%3E%3Cstop%20stop-color%3D%22%23ffc928%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ff8d3a%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22100%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ctext%20x%3D%22256%22%20y%3D%22305%22%20font-size%3D%22240%22%20text-anchor%3D%22middle%22%3E%F0%9F%8D%8A%3C%2Ftext%3E%3Ctext%20x%3D%22256%22%20y%3D%22445%22%20font-size%3D%2248%22%20font-weight%3D%22900%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%3E%E8%A8%98%E5%B8%B3%3C%2Ftext%3E%3C%2Fsvg%3E";
-  const appBaseUrl = new URL('./', window.location.href).href;
-  const startUrl = new URL('./?source=pwa', window.location.href).href;
+  // 真好點單檔 PWA：Manifest 由 Blob 動態生成，圖示使用 GitHub Pages 根目錄的 ico.png。
+  // GitHub Pages 正式網址位於 /JinOrder/，因此所有安裝路徑都轉成絕對網址。
+  let appBaseUrl;
+  try {
+    const isVirtual = window.location.href.startsWith('blob:') || window.location.href.startsWith('data:');
+    appBaseUrl = isVirtual
+      ? new URL('./', document.referrer || (window.location.origin + '/JinOrder/')).href
+      : new URL('./', window.location.href).href;
+  } catch (e) {
+    appBaseUrl = 'https://tcuteblue.github.io/JinOrder/';
+  }
+
+  let iconUrl;
+  try {
+    const isVirtual = window.location.href.startsWith('blob:') || window.location.href.startsWith('data:');
+    iconUrl = new URL('ico.png', isVirtual ? appBaseUrl : window.location.href).href;
+  } catch (e) {
+    iconUrl = new URL('ico.png', appBaseUrl).href;
+  }
+
+  const startUrl = new URL('./?source=pwa', appBaseUrl).href;
+  const svgFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23ff9b24'/%3E%3Ccircle cx='50' cy='43' r='29' fill='%23ffd928' stroke='%231b1b1b' stroke-width='5'/%3E%3Ccircle cx='40' cy='38' r='3.5'/%3E%3Ccircle cx='60' cy='38' r='3.5'/%3E%3Cpath d='M37 52 Q50 66 63 52' fill='none' stroke='%231b1b1b' stroke-width='5' stroke-linecap='round'/%3E%3Ctext x='50' y='91' font-size='15' font-weight='900' text-anchor='middle' fill='white' stroke='%23d94b18' stroke-width='1.5' paint-order='stroke'%3E真%3C/text%3E%3C/svg%3E";
+
   const manifest = {
     id: appBaseUrl,
-    name: '工作室收入記帳',
-    short_name: '工作室記帳',
-    description: '孩童收支、禮金與簡易記事管理。',
+    name: '真好點問卷系統',
+    short_name: '真好點',
+    description: '輕鬆設計問卷，快速收集與整理回答。',
     lang: 'zh-TW',
     start_url: startUrl,
     scope: appBaseUrl,
@@ -35,1177 +104,755 @@
     theme_color: '#ffc928',
     prefer_related_applications: false,
     icons: [
-      {src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any'},
-      {src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable'},
-      {src: svgFallback, sizes: 'any', type: 'image/svg+xml', purpose: 'any'}
+      // 沿用已實際成功安裝的信用卡夾範例：同一個正式 PNG 提供 192 / 512 尺寸宣告。
+      { src: iconUrl, sizes: '192x192 512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: svgFallback, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
     ]
   };
-  const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+
+  const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
   const manifestUrl = URL.createObjectURL(manifestBlob);
   const manifestLink = document.createElement('link');
   manifestLink.rel = 'manifest';
-  manifestLink.type = 'application/manifest+json';
   manifestLink.href = manifestUrl;
   document.head.appendChild(manifestLink);
+
+  // 瀏覽器分頁圖示及 iOS 主畫面圖示，均讀取根目錄 ico.png。
   const favicon = document.createElement('link');
-  favicon.rel = 'icon'; favicon.type = 'image/png'; favicon.href = icon192;
+  favicon.rel = 'icon';
+  favicon.type = 'image/png';
+  favicon.href = iconUrl;
   document.head.appendChild(favicon);
+
   const appleIcon = document.createElement('link');
-  appleIcon.rel = 'apple-touch-icon'; appleIcon.href = icon192;
+  appleIcon.rel = 'apple-touch-icon';
+  appleIcon.href = iconUrl;
   document.head.appendChild(appleIcon);
-  window.__STUDIO_ICON_192__ = icon192;
-  window.__STUDIO_ICON_512__ = icon512;
-  window.__STUDIO_MANIFEST_URL__ = manifestUrl;
-  window.addEventListener('pagehide', function() { URL.revokeObjectURL(manifestUrl); }, {once:true});
+
+  window.__JQ_LOGO_URL__ = iconUrl;
+  window.__JQ_MANIFEST_URL__ = manifestUrl;
+  window.__JQ_PWA_ICON_URL__ = iconUrl;
 })();
 </script>
-<style>
-:root{--ink:#493528;--muted:#8c7868;--cream:#fffaf0;--paper:#fff;--gold:#f7b928;--orange:#f18b37;--pink:#f47d91;--green:#78a86d;--line:#f0dfc2;--shadow:0 8px 24px rgba(103,69,30,.09);--danger:#c85d56}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#fff3d2 0,#fffaf1 270px,#fffaf1 100%);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:var(--ink);min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.app{max-width:980px;margin:auto;padding:18px 18px 44px}.topbar{display:flex;align-items:center;gap:13px;margin:2px 0 18px}.logo{width:64px;height:64px;object-fit:cover;border-radius:18px;box-shadow:0 4px 12px #8e5b2425}.brand{flex:1}.brand h1{margin:0;font-size:23px;letter-spacing:.04em}.brand p{margin:4px 0 0;color:#9a6b35;font-size:13px}.top-actions{display:flex;gap:8px;align-items:center}.icon-btn{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px 12px;color:var(--ink);box-shadow:0 3px 8px #86531a10}.statusline{font-size:12px;color:var(--muted);margin:0 0 14px;padding-left:4px}.panel{background:var(--paper);border:1px solid #f2e5cf;border-radius:20px;padding:18px;box-shadow:var(--shadow);margin-bottom:15px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}.section-head h2,.section-head h3{margin:0;font-size:18px}.subtle{font-size:13px;color:var(--muted)}.primary{background:linear-gradient(135deg,#f6b72d,#f18b37);color:#fff;font-weight:750;border-radius:13px;padding:11px 16px;box-shadow:0 5px 12px #eea22b35}.secondary{background:#fff3d7;color:#86551d;border:1px solid #f4d89b;border-radius:12px;padding:10px 14px;font-weight:650}.soft{background:#fff8ec;color:#795b3a;border:1px solid #f2e6d4;border-radius:11px;padding:8px 11px}.danger{background:#fff0ed;color:#b44c45;border:1px solid #f3d3ce;border-radius:11px;padding:8px 11px}.small{font-size:13px;padding:7px 10px}.children-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px}.child-card{border:1px solid #f1dfbd;border-radius:17px;padding:15px;background:linear-gradient(145deg,#fffdf8,#fff6e6);text-align:left;display:flex;gap:12px;align-items:center;min-height:86px;color:var(--ink);transition:.15s}.child-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}.child-avatar{width:48px;height:48px;display:grid;place-items:center;background:#ffe8a5;border-radius:15px;font-size:25px;flex:none}.child-card strong{display:block;font-size:17px}.child-card small{color:var(--muted)}.empty{text-align:center;color:var(--muted);padding:30px 10px;line-height:1.8}.tab-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.tab{padding:9px 14px;border-radius:999px;background:#fff;border:1px solid var(--line);color:#806d5b;font-weight:650}.tab.active{background:#ffedbd;color:#7b4f13;border-color:#f5d17e}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}.summary-card{border:1px solid #f2e3c9;border-radius:15px;padding:13px;background:#fffdf9}.summary-card span{display:block;font-size:12px;color:var(--muted)}.summary-card strong{font-size:20px;display:block;margin-top:5px;overflow-wrap:anywhere}.income{color:#57914f}.expense{color:#c46d58}.net{color:#9a6a15}.record-list{display:flex;flex-direction:column;gap:9px}.record{border:1px solid #f1e7d8;border-radius:14px;padding:12px 13px;display:flex;align-items:center;gap:12px;background:#fff}.record-main{flex:1;min-width:0}.record-title{font-weight:750}.record-meta{font-size:12px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}.record-amount{font-weight:800;white-space:nowrap}.record-actions{display:flex;gap:5px}.month-picker{border:1px solid var(--line);border-radius:11px;padding:8px 10px;background:white;color:var(--ink)}.category-breakdown{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px dashed #eee1cf}.category-breakdown:last-child{border-bottom:0}.note-card{background:#fffaf1;border:1px solid #f2e3c9;border-left:4px solid #efb33c;border-radius:13px;padding:12px}.note-card h4{margin:0 0 5px}.note-card p{margin:5px 0;color:#75614f;font-size:13px}.toolbar{display:flex;flex-wrap:wrap;gap:8px}.settings-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.setting-tile{border:1px solid var(--line);background:#fffdf8;border-radius:15px;padding:14px;text-align:left;color:var(--ink)}.setting-tile strong{display:block;margin-bottom:4px}.category-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3eadc}.category-row:last-child{border-bottom:0}.category-name{flex:1}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}.field label{font-size:13px;font-weight:700;color:#76583d}.field input,.field select,.field textarea{width:100%;border:1px solid #e9dbc5;border-radius:11px;padding:11px 12px;background:#fffdf9;color:var(--ink);outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:#e8ac36;box-shadow:0 0 0 3px #f7d99044}.field textarea{min-height:78px;resize:vertical}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.modal-backdrop{position:fixed;inset:0;background:#36231666;display:flex;align-items:center;justify-content:center;padding:15px;z-index:20}.modal{width:min(540px,100%);max-height:92vh;overflow:auto;background:#fffdf8;border-radius:20px;padding:20px;box-shadow:0 18px 60px #3b251c44}.modal h3{margin:0 0 16px;font-size:20px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:15px}.helper{font-size:12px;color:var(--muted);line-height:1.6}.duration{display:inline-block;background:#fff0c2;color:#825917;border-radius:10px;padding:7px 10px;font-weight:750;font-size:13px}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);padding:11px 16px;border-radius:12px;background:#4e3a2c;color:white;box-shadow:var(--shadow);z-index:50;max-width:90vw;text-align:center;font-size:14px}.hidden{display:none!important}.lock-wrap{max-width:430px;margin:8vh auto;background:white;border-radius:22px;padding:25px;box-shadow:var(--shadow);border:1px solid var(--line)}.lock-wrap img{width:82px;height:82px;border-radius:20px;display:block;margin:0 auto 12px}.lock-wrap h2{text-align:center;margin:0 0 6px}.lock-wrap p{text-align:center;color:var(--muted);font-size:13px;margin:0 0 20px}.footer{text-align:center;color:#aa9277;font-size:11px;margin:22px 0 0}.divider{border:0;border-top:1px solid #f1e6d5;margin:16px 0}
-@media(max-width:620px){.app{padding:12px 12px 32px}.topbar{gap:10px}.logo{width:54px;height:54px;border-radius:15px}.brand h1{font-size:19px}.brand p{font-size:11px}.top-actions{gap:5px}.icon-btn{padding:9px}.panel{padding:15px;border-radius:17px}.summary-grid{gap:7px}.summary-card{padding:10px}.summary-card strong{font-size:17px}.record{align-items:flex-start;flex-wrap:wrap}.record-actions{width:100%;justify-content:flex-end}.form-grid{grid-template-columns:1fr}.section-head{align-items:flex-start}}
-
-
-/* ===== 精緻按鈕與介面層次 ===== */
-:root{
-  --gold-deep:#d98518;
-  --orange-deep:#dc6c2f;
-  --pink-deep:#dd647e;
-  --green-deep:#558d54;
-  --button-shadow:0 5px 0 rgba(180,112,29,.24),0 10px 20px rgba(123,76,28,.12);
-}
-body{
-  background:
-    radial-gradient(circle at 8% 4%,rgba(255,205,90,.22),transparent 25rem),
-    radial-gradient(circle at 94% 17%,rgba(255,145,132,.14),transparent 22rem),
-    linear-gradient(180deg,#fff0c9 0,#fffaf1 300px,#fffaf1 100%);
-}
-button{
-  position:relative;
-  -webkit-tap-highlight-color:transparent;
-  user-select:none;
-  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease,background .16s ease;
-  outline:none;
-}
-button:focus-visible{outline:3px solid rgba(238,166,43,.45);outline-offset:3px}
-button:disabled{cursor:not-allowed;opacity:.58;filter:saturate(.65);transform:none!important;box-shadow:none!important}
-.primary{
-  color:#fff;
-  background:linear-gradient(135deg,#ffc83f 0%,#ffa12f 48%,#f17d39 100%);
-  border:1px solid rgba(255,255,255,.72);
-  border-radius:15px;
-  padding:12px 17px;
-  font-weight:850;
-  letter-spacing:.02em;
-  text-shadow:0 1px 1px rgba(125,67,15,.18);
-  box-shadow:0 5px 0 #d77a28,0 9px 18px rgba(216,126,39,.22),inset 0 1px 0 rgba(255,255,255,.5);
-}
-.primary:hover{transform:translateY(-2px);filter:saturate(1.08);box-shadow:0 7px 0 #d77a28,0 13px 22px rgba(216,126,39,.25),inset 0 1px 0 rgba(255,255,255,.55)}
-.primary:active{transform:translateY(3px) scale(.985);box-shadow:0 2px 0 #d77a28,0 4px 9px rgba(216,126,39,.16),inset 0 2px 5px rgba(130,67,16,.12)}
-.secondary{
-  color:#865018;
-  background:linear-gradient(180deg,#fff8e8,#ffedc7);
-  border:1px solid #f2d18c;
-  border-radius:14px;
-  padding:11px 15px;
-  font-weight:800;
-  box-shadow:0 4px 0 #e9d29f,0 7px 14px rgba(135,93,36,.08),inset 0 1px 0 #fff;
-}
-.secondary:hover{transform:translateY(-2px);background:linear-gradient(180deg,#fffaf0,#ffe7b0);box-shadow:0 6px 0 #e9d29f,0 10px 16px rgba(135,93,36,.12)}
-.secondary:active{transform:translateY(2px);box-shadow:0 1px 0 #e9d29f}
-.soft{
-  color:#76563b;
-  background:linear-gradient(180deg,#fff,#fff8ed);
-  border:1px solid #eadcc8;
-  border-radius:12px;
-  padding:9px 12px;
-  font-weight:750;
-  box-shadow:0 3px 0 #e8dfd2,0 5px 10px rgba(94,70,44,.055);
-}
-.soft:hover{transform:translateY(-1px);background:#fffdf8;box-shadow:0 4px 0 #e8dfd2,0 7px 12px rgba(94,70,44,.08)}
-.soft:active{transform:translateY(2px);box-shadow:0 1px 0 #e8dfd2}
-.danger{
-  color:#b64b4e;
-  background:linear-gradient(180deg,#fff5f2,#ffe9e5);
-  border:1px solid #f2cbc4;
-  border-radius:12px;
-  padding:9px 12px;
-  font-weight:800;
-  box-shadow:0 3px 0 #eac9c2,0 5px 10px rgba(175,79,69,.07);
-}
-.danger:hover{transform:translateY(-1px);background:linear-gradient(180deg,#fff8f5,#ffdfd8)}
-.danger:active{transform:translateY(2px);box-shadow:0 1px 0 #eac9c2}
-.small{font-size:13px;padding:8px 11px;border-radius:11px}
-.icon-btn{
-  min-width:44px;min-height:44px;
-  display:inline-grid;place-items:center;
-  background:linear-gradient(180deg,#fff,#fff8ea);
-  border:1px solid #f0dfc2;border-radius:15px;
-  color:#835c2f;box-shadow:0 4px 0 #ebdfcc,0 7px 13px rgba(103,69,30,.08);
-}
-.icon-btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #ebdfcc,0 10px 16px rgba(103,69,30,.1)}
-.icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #ebdfcc}
-.install-btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  min-height:44px;padding:0 15px;border-radius:15px;
-  color:#fff;background:linear-gradient(135deg,#f7bd2f,#f18a39 72%,#e97854);
-  border:1px solid rgba(255,255,255,.75);font-size:13px;font-weight:900;letter-spacing:.02em;
-  box-shadow:0 4px 0 #d77931,0 8px 15px rgba(216,126,39,.2),inset 0 1px 0 rgba(255,255,255,.45);
-}
-.install-btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #d77931,0 11px 18px rgba(216,126,39,.24)}
-.install-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #d77931}
-.install-symbol{font-size:19px;line-height:1;font-weight:900}
-.panel{
-  border:1px solid rgba(239,220,189,.9);
-  border-radius:23px;
-  box-shadow:0 9px 26px rgba(115,78,35,.085),inset 0 1px 0 rgba(255,255,255,.9);
-}
-.section-head h2,.section-head h3{letter-spacing:.015em}
-.child-card{
-  position:relative;overflow:hidden;
-  border:1px solid #f1d8a8;
-  border-radius:19px;
-  background:linear-gradient(145deg,#fffefa 0%,#fff8e9 58%,#fff0d5 100%);
-  box-shadow:0 4px 0 #f0dfc2,0 8px 16px rgba(117,78,36,.075),inset 0 1px 0 #fff;
-}
-.child-card:after{content:"›";font-size:25px;font-weight:800;color:#d89a38;margin-left:auto;opacity:.8;transition:transform .16s ease}
-.child-card:hover{transform:translateY(-3px);border-color:#eec56f;box-shadow:0 7px 0 #efd9ad,0 13px 20px rgba(117,78,36,.11),inset 0 1px 0 #fff}
-.child-card:hover:after{transform:translateX(3px)}
-.child-card:active{transform:translateY(2px) scale(.99);box-shadow:0 2px 0 #efd9ad}
-.child-avatar{background:linear-gradient(145deg,#ffe99e,#ffd36b);box-shadow:inset 0 2px 3px rgba(255,255,255,.7),0 3px 8px rgba(196,139,42,.12)}
-.tab{padding:10px 16px;border:1px solid #eedfc9;background:linear-gradient(180deg,#fff,#fffaf2);box-shadow:0 3px 0 #ede3d5,0 5px 10px rgba(96,70,41,.045);transition:all .16s ease}
-.tab:hover{transform:translateY(-1px);border-color:#e9c779}
-.tab:active{transform:translateY(1px);box-shadow:0 1px 0 #ede3d5}
-.tab.active{color:#754707;border-color:#f2c75f;background:linear-gradient(135deg,#ffe9a5,#ffd36c);box-shadow:0 3px 0 #e9b84a,0 7px 13px rgba(223,166,47,.16),inset 0 1px 0 rgba(255,255,255,.75)}
-.setting-tile{
-  border:1px solid #f0dfc2;
-  background:linear-gradient(145deg,#fffefa,#fff7e9);
-  border-radius:18px;padding:16px;text-align:left;color:var(--ink);
-  box-shadow:0 4px 0 #f0e4d0,0 8px 14px rgba(105,74,39,.06),inset 0 1px 0 #fff;
-}
-.setting-tile:hover{transform:translateY(-2px);border-color:#eecb83;box-shadow:0 6px 0 #f0e4d0,0 12px 18px rgba(105,74,39,.1)}
-.setting-tile:active{transform:translateY(2px);box-shadow:0 1px 0 #f0e4d0}
-.summary-card{box-shadow:inset 0 3px 0 rgba(246,190,83,.38),0 4px 12px rgba(111,78,42,.04);background:linear-gradient(145deg,#fffefa,#fffaf1)}
-.record,.note-card{box-shadow:0 3px 10px rgba(103,69,30,.045)}
-.record-actions{gap:8px}
-.field input,.field select,.field textarea,.month-picker{box-shadow:inset 0 1px 2px rgba(103,69,30,.035);transition:border-color .15s ease,box-shadow .15s ease}
-.modal{border:1px solid #f0dfc2;box-shadow:0 22px 65px rgba(57,37,22,.28),inset 0 1px 0 #fff}
-.modal-actions{padding-top:4px}
-.install-guide{color:#68503a;line-height:1.8;font-size:14px}.install-guide ol{padding-left:22px}.install-guide li{margin:8px 0}.install-guide strong{color:#a65e1d}
-.toast{box-shadow:0 9px 25px rgba(48,34,23,.22);border:1px solid rgba(255,255,255,.15)}
-@media(max-width:620px){
-  .install-btn{min-height:42px;padding:0 11px;font-size:12px;border-radius:14px}
-  .primary,.secondary{min-height:42px}
-  .tab{padding:9px 13px}
-  .child-card{min-height:82px}
-}
-@media(prefers-reduced-motion:reduce){button{transition:none!important}}
-
-
-/* 全域設定與備份按鈕固定 2×2 */
-.backup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 8px}
-.backup-tile{min-height:82px;border-radius:17px;padding:14px 10px;font-weight:850;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;flex-direction:column;text-align:center}
-.backup-tile span{font-size:12px;font-weight:600;opacity:.83}
-.backup-cloud{color:#fff;background:linear-gradient(135deg,#f8bd38,#eb8435);box-shadow:0 5px 0 #d77a28,0 9px 17px #d88a332b}
-.backup-restore{color:#fff;background:linear-gradient(135deg,#86b77d,#559766);box-shadow:0 5px 0 #4b8758,0 9px 17px #5597662b}
-.backup-local{color:#80531c;background:linear-gradient(180deg,#fff8e8,#ffe9bf);border:1px solid #efcf8a;box-shadow:0 5px 0 #e8d09e,0 8px 15px #9b73301b}
-.backup-grid button:active{transform:translateY(3px);box-shadow:0 1px 0 currentColor}
-.global-setting-note{padding:11px 13px;border-radius:13px;background:#fff8e9;border:1px solid #f0dfc2;color:#806344;font-size:13px;line-height:1.65;margin:10px 0 14px}
-.busy-overlay{position:fixed;inset:0;z-index:1000;background:rgba(61,43,28,.38);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
-.busy-card{width:min(330px,92vw);border-radius:22px;background:#fffdf8;border:1px solid #f0dfc2;padding:25px 22px;text-align:center;box-shadow:0 20px 55px rgba(52,35,21,.25)}
-.busy-spinner{width:42px;height:42px;border:4px solid #f7e6c2;border-top-color:#ec9635;border-radius:50%;margin:0 auto 14px;animation:studioSpin .8s linear infinite}
-.busy-title{font-weight:900;font-size:16px;color:#68472c}
-.busy-detail{font-size:12px;color:#987d63;margin-top:7px;line-height:1.6}
-@keyframes studioSpin{to{transform:rotate(360deg)}}
-.analysis-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.analysis-controls .field{margin:0}
-.child-analysis-row{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,auto);gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #f2e7d7;font-size:13px}
-.child-analysis-row:last-child{border-bottom:0}
-.child-analysis-head{font-size:11px;color:#9a826a;font-weight:750;padding:4px 0 7px;border-bottom:1px solid #eadcc9}
-@media(max-width:480px){.backup-grid{gap:9px}.backup-tile{min-height:76px;font-size:14px;padding:11px 7px}.analysis-controls{grid-template-columns:1fr}.child-analysis-row{grid-template-columns:minmax(0,1fr) auto auto auto;gap:5px;font-size:11px}.child-analysis-head{font-size:10px}}
-.home-controls{display:grid;grid-template-columns:1.08fr 1fr 1fr;gap:8px;margin:12px 0 15px}
-.home-controls button{min-width:0;min-height:43px;padding:8px 5px;font-size:13px;white-space:nowrap}
-.home-controls .tab{border-radius:13px}
-.home-controls .tab.active{transform:none}
-.statusline{transition:color .15s ease}
-.statusline[data-kind="ok"]{color:#55834e}
-.statusline[data-kind="offline"]{color:#b15d39}
-@media(max-width:380px){.home-controls{gap:5px}.home-controls button{font-size:12px;padding:7px 3px}}
-
-
-/* 收支分析圖表（純前端 CSS，無外部圖表套件） */
-.analysis-chart-card{border:1px solid #f0e3cf;border-radius:16px;padding:14px;background:#fffdf9;margin:12px 0}
-.analysis-chart-card h3{font-size:15px;margin:0 0 12px}
-.analysis-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.chart-row{margin:10px 0}
-.chart-row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:6px}
-.chart-row-head span{min-width:0;overflow-wrap:anywhere}
-.chart-row-head strong{white-space:nowrap;font-variant-numeric:tabular-nums}
-.chart-track{height:11px;background:#f4eee4;border-radius:99px;overflow:hidden}
-.chart-fill{height:100%;border-radius:99px;min-width:0;transition:width .25s ease}
-.chart-fill.income,.trend-bar.income{background:linear-gradient(90deg,#9ac98d,#57914f)}
-.chart-fill.expense,.trend-bar.expense{background:linear-gradient(90deg,#e9a18e,#c46d58)}
-.chart-fill.net{background:linear-gradient(90deg,#f6d174,#c18a25)}
-.chart-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0 0 8px}
-.chart-legend span{display:inline-flex;align-items:center;gap:5px}
-.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
-.legend-dot.income{background:#57914f}.legend-dot.expense{background:#c46d58}.legend-dot.net{background:#c18a25}
-.trend-chart{height:160px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end;padding:8px 2px 0;border-bottom:1px solid #eadfce}
-.trend-month{height:100%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px}
-.trend-bars{height:124px;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:4px}
-.trend-bar{width:min(24px,38%);min-height:0;border-radius:6px 6px 2px 2px;position:relative}
-.trend-label{font-size:11px;color:var(--muted);white-space:nowrap}
-.child-chart-row{margin:12px 0}
-.child-chart-title{font-size:13px;font-weight:700;margin-bottom:6px}
-.child-chart-pair{display:grid;grid-template-columns:34px 1fr auto;gap:7px;align-items:center;margin:4px 0;font-size:12px}
-.child-chart-pair .chart-track{height:8px}
-.chart-empty{font-size:12px;color:var(--muted);padding:10px 0}
-.home-settlement-block{border:1px solid #ead8b9;background:linear-gradient(135deg,#fffaf0,#fff3d9);border-radius:17px;padding:14px;margin-top:4px}
-.home-settlement-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.home-settlement-head strong{font-size:15px}
-.home-settlement-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.home-settlement-value{border:1px solid #f0dfc2;background:#fff;border-radius:13px;padding:12px}
-.home-settlement-value span{display:block;font-size:12px;color:var(--muted)}
-.home-settlement-value strong{display:block;margin-top:5px;font-size:20px;overflow-wrap:anywhere}
-.advance-main{min-width:0}
-/* 每月分帳結算 */
-.settlement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.settlement-card{border:1px solid #f0dfc3;border-radius:15px;padding:14px;background:#fffdf8;margin-top:12px}
-.settlement-card h3{font-size:15px;margin:0 0 10px}
-.settlement-total{font-size:23px;font-weight:850;color:#8a5a16}
-.advance-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #f1e7d8}
-@media(max-width:600px){.analysis-chart-grid{grid-template-columns:1fr}.trend-chart{gap:4px;overflow-x:auto}.trend-bars{gap:3px}.trend-label{font-size:10px}.settlement-grid{grid-template-columns:1fr}.advance-row{grid-template-columns:1fr auto}.advance-row .toolbar{grid-column:1/-1}.home-settlement-head{align-items:flex-start;flex-direction:column}.home-settlement-head button{width:100%}.home-settlement-value strong{font-size:17px}}
-
-</style>
 </head>
 <body>
-<div id="appRoot" class="app">
-  <div id="loading" class="empty"><div class="busy-spinner"></div><strong>正在載入工作室資料……</strong><div class="helper">首次使用會讀取雲端資料；下次會先顯示本機上次同步資料。</div></div>
-</div>
-<div id="modalRoot"></div>
-<div id="toastRoot"></div>
-<div id="busyRoot"></div>
-<input id="localFileInput" type="file" accept="application/json,.json" class="hidden">
+  <iframe id="gasBridge" title="真好點雲端服務" aria-hidden="true"></iframe>
+  <div class="app">
+    <header class="top">
+      <div class="logo" id="logoTap" title="真好點問卷系統"><img id="logoImage" alt="真好點 Logo" /></div>
+      <div class="brand"><h1>真好點問卷系統</h1><p>輕鬆設計問卷，快速收集每一份回覆</p></div>
+    </header>
+    <div class="install-strip" id="installStrip"><button class="install-btn" id="installBtn" type="button">📲 安裝為 APP</button></div>
+    <div id="syncStatus" class="sync-status" role="status" aria-live="polite"></div>
+    <main id="main" aria-live="polite"></main>
+    <div class="footer">真好點問卷系統 ・ 問卷設計與資料整理</div>
+  </div>
+  <div id="modalRoot"></div><div id="toast" class="toast hidden"></div>
 <script>
 'use strict';
-
-// ===== 專案連線設定：此網址對應本專案專用 GAS =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwW46ovnM9y_jkwO9sBlSPj9DLkj7NRj--1SVusZhbLE3X1F_mteQ7A8Z5hAEr0EP8S/exec';
-const APP_NAME = '工作室收入記帳';
-const $ = (selector, root=document) => root.querySelector(selector);
-const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const money = value => 'NT$' + Number(value || 0).toLocaleString('zh-TW', {maximumFractionDigits:0});
-const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const thisMonth = () => today().slice(0,7);
-const uid = prefix => prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-let state = {children:[],transactions:[],notes:[],categories:[],settings:{}};
-let currentChildId = null;
-let currentPage = 'home';
-let analysisChildId = '*';
-let analysisMonth = thisMonth();
-let analysisStartMonth = buildAnalysisMonths(thisMonth(),6)[0];
-let analysisEndMonth = thisMonth();
-let childTab = 'ledger';
-let selectedMonth = thisMonth();
-let showArchived = false;
-let toastTimer = null;
-let requestCounter = 0;
-let deferredInstallPrompt = null;
-const LOCAL_CACHE_KEY = 'studioIncomeLedgerCache.v1';
-let cloudReady = false;
-let localCacheAvailable = false;
-let syncStatusText = '首次載入雲端資料…';
-let syncStatusKind = 'loading';
-let historyInitialized = false;
-
-function saveLocalCache() {
-  try {
-    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({savedAt:new Date().toISOString(),state}));
-    localCacheAvailable = true;
-  } catch (err) {
-    // 本機空間不足或瀏覽器限制時，不影響雲端資料操作。
-    console.warn('本機快取儲存失敗', err);
-  }
-}
-function readLocalCache() {
-  try {
-    const raw=localStorage.getItem(LOCAL_CACHE_KEY);
+/* 部署完成後，將 GAS /exec 網址貼在下方，然後更新 GitHub Pages 的 index.html。 */
+const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxw-JED9O-aW_x39VIOZJYeTb4Ou57eito80nsnYcqR3YM4FMQH49XMa3lbTjALbg9klA/exec';
+const CHANNEL = 'JINORDER_SURVEY_RPC_V1';
+const PROFILE_STORAGE_KEY = 'jinorder_profile_v1';
+const PUBLIC_CACHE_KEY = 'jinorder_public_data_v1';
+function readCachedPublicData(){
+  try{
+    const raw=localStorage.getItem(PUBLIC_CACHE_KEY);
     if(!raw)return null;
-    const parsed=JSON.parse(raw);
-    if(!parsed || !parsed.state || typeof parsed.state!=='object')return null;
-    return parsed;
-  } catch (err) {
-    console.warn('讀取本機快取失敗', err);
-    return null;
-  }
+    const data=JSON.parse(raw);
+    if(!data||!Array.isArray(data.surveys))return null;
+    // 首頁快取僅包含公開問卷清單，不包含任何填寫者資料。
+    return {appName:String(data.appName||'真好點問卷系統'),surveys:data.surveys.filter(s=>s&&s.id&&s.title),cachedAt:String(data.cachedAt||'')};
+  }catch(e){return null}
 }
-function setSyncStatus(message,kind='loading') {
-  syncStatusText=message;syncStatusKind=kind;
-  const el=$('#syncStatus');
-  if(el){el.textContent=message;el.dataset.kind=kind;}
+function writeCachedPublicData(data){
+  try{
+    const safeData={appName:String(data.appName||'真好點問卷系統'),surveys:Array.isArray(data.surveys)?data.surveys:[],cachedAt:new Date().toISOString()};
+    localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify(safeData));
+  }catch(e){/* 本機空間不足或瀏覽器停用儲存時，不影響雲端使用。 */}
 }
-function routeSnapshot() {
-  return {__studioRoute:true,page:currentPage,childId:currentChildId,childTab,selectedMonth,showArchived,analysisChildId,analysisMonth,analysisStartMonth,analysisEndMonth};
+const initialPublicCache=readCachedPublicData();
+function readRememberedIdentity(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'null');
+    if(!saved||typeof saved!=='object')return null;
+    return {name:String(saved.name||''),phone:String(saved.phone||'')};
+  }catch(e){return null}
 }
-function pushRouteHistory() {
-  try { history.pushState(routeSnapshot(), '', location.href); } catch (_) {}
-}
-function initializeAppHistory() {
-  if(historyInitialized)return;historyInitialized=true;
-  try {
-    // 保留瀏覽器原本的上一頁，並在程式根頁放一個退出確認關卡。
-    history.replaceState({__studioExitGate:true}, '', location.href);
-    history.pushState({__studioRootGuard:true}, '', location.href);
-  } catch (_) {}
-}
-function restoreRoute(route) {
-  if(!route || route.__studioRootGuard) {
-    currentPage='home';currentChildId=null;showArchived=false;childTab='ledger';selectedMonth=thisMonth();
-  } else {
-    currentPage=route.page||'home';currentChildId=route.childId||null;
-    childTab=route.childTab||'ledger';selectedMonth=route.selectedMonth||thisMonth();
-    showArchived=!!route.showArchived;analysisChildId=route.analysisChildId||'*';analysisMonth=route.analysisMonth||thisMonth();analysisStartMonth=route.analysisStartMonth||buildAnalysisMonths(analysisMonth,6)[0];analysisEndMonth=route.analysisEndMonth||analysisMonth;
-  }
-  render();
-}
-function showExitPrompt() {
-  openModal('要離開工作室收入記帳嗎？',`<p class="helper" style="font-size:14px">按「離開」返回上一個頁面；按「取消」繼續使用工作室收入記帳。</p><div class="modal-actions"><button type="button" class="soft" data-action="stay-app">取消</button><button type="button" class="primary" data-action="exit-app">離開</button></div>`);
-}
-window.addEventListener('popstate',e=>{
-  if($('#modalRoot')?.firstElementChild){
-    closeModal();
-    try{history.pushState(routeSnapshot(), '', location.href);}catch(_){}
-    return;
-  }
-  if(e.state?.__studioExitGate){
-    restoreRoute({page:'home'});showExitPrompt();return;
-  }
-  if(e.state?.__studioRootGuard){restoreRoute(e.state);return;}
-  if(e.state?.__studioRoute){restoreRoute(e.state);return;}
-  // 瀏覽器未保留狀態時，仍回到程式首頁並提供退出確認。
-  restoreRoute({page:'home'});showExitPrompt();
-});
-
-function base64UrlEncode(text) {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
-function api(action, params={}) {
-  return new Promise((resolve,reject) => {
-    const callback = '__studioCb' + (++requestCounter) + '_' + Date.now();
-    const script = document.createElement('script');
-    let done = false;
-    const finish = (err, data) => {
-      if (done) return; done = true;
-      clearTimeout(timer); script.remove(); delete window[callback];
-      err ? reject(err) : resolve(data);
-    };
-    window[callback] = data => finish(null,data);
-    const query = new URLSearchParams({action, callback, _:String(Date.now())});
-    Object.entries(params).forEach(([k,v]) => query.set(k,String(v)));
-    script.onerror = () => finish(new Error('無法連接 GAS，請檢查部署網址及網路。'));
-    const timer = setTimeout(() => finish(new Error('雲端連線逾時，請稍後再試。')), 30000);
-    script.src = GAS_URL + '?' + query.toString();
-    document.head.appendChild(script);
-  });
-}
-async function apiMutation(ops) {
-  const data = base64UrlEncode(JSON.stringify({ops}));
-  const result = await api('mutate',{data});
-  if (!result.ok) throw new Error(result.error || '雲端寫入失敗。');
-  if (!result.backupOk) showToast(result.backupMessage || '資料已寫入試算表，但自動備份未完成。');
-  try { await loadState(false); }
-  catch (refreshErr) { showToast('雲端已回覆寫入成功，但畫面重新讀取失敗；請按重新整理確認最新資料。'); }
-  return result;
-}
-async function loadState(showNotice=true) {
-  const result = await api('bootstrap');
-  if (!result.ok) throw new Error(result.error || '讀取雲端資料失敗。');
-  state = normalizeState(result.state || {});
-  cloudReady = true;
-  saveLocalCache();
-  setSyncStatus('☁️ 雲端資料已同步', 'ok');
-  if (showNotice) showToast('雲端資料已同步');
-  render();
-}
-function normalizeState(s) {
-  const rawCats=Array.isArray(s.categories)?s.categories:[];
-  // 將舊版每位孩童各自的項目合併成全體共用項目；舊識別碼保留為停用別名，供歷史紀錄編輯使用。
-  const ordered=rawCats.slice().sort((a,b)=>{
-    const aa=(a.active===false||a.active==='false')?1:0, ba=(b.active===false||b.active==='false')?1:0;
-    if(aa!==ba)return aa-ba;
-    return (String(a.childId||'')==='*'?-1:1)-(String(b.childId||'')==='*'?-1:1);
-  });
-  const primary=new Map(), categories=[];
-  ordered.forEach(c=>{
-    const key=String(c.type||'')+'::'+String(c.name||'').trim().toLocaleLowerCase();
-    if(!key||key==='::')return;
-    if(!primary.has(key)){
-      const shared={...c,childId:'*'};primary.set(key,shared);categories.push(shared);
-    }else if(primary.get(key).id!==c.id){
-      categories.push({...c,childId:'__legacy__',active:false});
-    }
-  });
-  // 預設收入項目：托育費。若雲端尚未建立，前端也會補入選單，確保可立即選用；不覆蓋既有項目。
-  const hasChildcareFee=categories.some(c=>c.type==='income'&&String(c.name||'').trim()==='托育費'&&c.active!==false&&c.active!=='false');
-  if(!hasChildcareFee){
-    const incomeSort=categories.filter(c=>c.type==='income').reduce((max,c)=>Math.max(max,Number(c.sort)||0),0);
-    categories.push({id:'cat_childcare_fee',childId:'*',type:'income',name:'托育費',sort:incomeSort+10,active:true});
-  }
-  return {children:Array.isArray(s.children)?s.children:[],transactions:Array.isArray(s.transactions)?s.transactions:[],notes:Array.isArray(s.notes)?s.notes:[],categories,settings:s.settings||{}};
-}
-function showToast(message) {
-  const root=$('#toastRoot'); root.innerHTML=`<div class="toast">${esc(message)}</div>`;
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>root.innerHTML='',3600);
-}
-function setBusy(button, busy, label) { if(!button)return; if(busy){button.dataset.oldText=button.textContent;button.disabled=true;button.textContent=label||'處理中…';}else{button.disabled=false;button.textContent=button.dataset.oldText||button.textContent;} }
-let busyActive=false;
-function showBusy(title='正在連接雲端…',detail='請稍候，請勿關閉程式或重複點擊。'){
-  busyActive=true;
-  $('#busyRoot').innerHTML=`<div class="busy-overlay" role="status" aria-live="polite"><div class="busy-card"><div class="busy-spinner"></div><div class="busy-title">${esc(title)}</div><div class="busy-detail" id="busyDetail">${esc(detail)}</div></div></div>`;
-}
-function updateBusyDetail(detail){const el=$('#busyDetail');if(el)el.textContent=detail;}
-function hideBusy(){busyActive=false;$('#busyRoot').innerHTML='';}
-async function withBusy(title,fn,button=null,detail){
-  if(busyActive)return;
-  setBusy(button,true,'處理中…');showBusy(title,detail);
-  try{return await fn();}
-  finally{hideBusy();setBusy(button,false);}
-}
-function render() {
-  if(currentPage==='analysis'){renderAnalysis();return;}
-  if(currentPage==='settings'){renderSettings();return;}
-  if(currentPage==='settlement'){renderSettlement();return;}
-  const child = state.children.find(c=>c.id===currentChildId);
-  if (currentChildId && child) renderChild(child); else { currentChildId=null; renderHome(); }
-}
-function shell(content) {
-  const root=$('#appRoot');
-  root.innerHTML=`
-    <header class="topbar">
-      <img class="logo" src="${window.__STUDIO_ICON_512__}" alt="工作室收入記帳圖示">
-      <div class="brand"><h1>${APP_NAME}</h1><p>把每一份照顧與收穫，好好記錄下來</p></div>
-      <div class="top-actions">
-        <button class="install-btn" data-action="install" title="安裝工作室收入記帳"><span class="install-symbol">⇩</span><span>安裝 APP</span></button>
-        <button class="icon-btn" data-action="analysis" title="收支明細分析">📊</button>
-        <button class="icon-btn" data-action="settings" title="設定與備份">⚙️</button>
-      </div>
-    </header>
-    <div id="syncStatus" class="statusline" data-kind="${esc(syncStatusKind)}">${esc(syncStatusText)}</div>
-    ${content}
-    <div class="footer">工作室收入記帳・專用雲端資料</div>`;
-  updateInstallButton();
-}
-function renderHome() {
-  currentPage='home';
-  const active=state.children.filter(c=>c.status!=='archived').sort((a,b)=>String(a.name).localeCompare(String(b.name),'zh-TW'));
-  const archived=state.children.filter(c=>c.status==='archived').sort((a,b)=>String(a.name).localeCompare(String(b.name),'zh-TW'));
-  const list=showArchived?archived:active;
-  const income=state.transactions.filter(t=>String(t.date||'').startsWith(thisMonth())&&t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
-  const expenses=state.transactions.filter(t=>String(t.date||'').startsWith(thisMonth())&&t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-  shell(`
-    <section class="panel">
-      <div class="section-head"><div><h2>${showArchived?'已離托孩童':'目前收托孩童'}</h2><div class="subtle">${showArchived?'歷史資料完整保留，可隨時恢復收托':'選擇孩童即可查看個別收支與記事'}</div></div></div>
-      <div class="home-controls"><button class="primary" data-action="add-child">＋ 新增孩童</button><button class="tab ${!showArchived?'active':''}" data-action="show-active">收托中（${active.length}）</button><button class="tab ${showArchived?'active':''}" data-action="show-archived">已離托（${archived.length}）</button></div>
-      ${list.length?`<div class="children-grid">${list.map(c=>`<button class="child-card" data-action="open-child" data-id="${esc(c.id)}"><span class="child-avatar">${showArchived?'📁':'🧸'}</span><span><strong>${esc(c.name)}</strong><small>${showArchived?'已離托・點選查看歷史':'點選進入孩童帳務'}</small></span></button>`).join('')}</div>`:`<div class="empty">${showArchived?'目前沒有已離托的孩童。':'尚未新增孩童，按右上方「新增孩童」開始建立資料。'}</div>`}
-    </section>
-    <section class="panel"><div class="section-head"><div><h3>本月工作室收支概況</h3><div class="subtle">${thisMonth()}</div></div></div>
-      <div class="summary-grid"><div class="summary-card"><span>原始收入</span><strong class="income">${money(income)}</strong></div><div class="summary-card"><span>支出／退費</span><strong class="expense">${money(expenses)}</strong></div><div class="summary-card"><span>原始結餘</span><strong class="net">${money(income-expenses)}</strong></div></div>
-      ${renderHomeSettlementSummary(income)}
-    </section>
-  `);
-}
-function renderHomeSettlementSummary(monthIncome){
-  const month=thisMonth(),d=settlementData(month),c=settlementCalc(month,d);
-  return `<div class="home-settlement-block"><div class="home-settlement-head"><div><strong>🤝 本月分帳概況</strong><div class="helper">依本月收入、分帳規則及雙向代墊即時計算；分帳後收入尚未扣除其他工作室支出</div></div><button class="primary small" data-action="settlement" data-month="${esc(month)}">本月分帳結算</button></div><div class="home-settlement-grid"><div class="home-settlement-value"><span>分帳後工作室收入</span><strong class="income">${money(Number(monthIncome||0)-c.due)}</strong></div><div class="home-settlement-value"><span>同事應付金額</span><strong class="expense">${money(c.due)}</strong></div></div></div>`;
-}
-
-function childRecords(childId, month='') {
-  return state.transactions.filter(t=>t.childId===childId&&(!month||String(t.date||'').startsWith(month))).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.updatedAt).localeCompare(String(a.updatedAt)));
-}
-function childNotes(childId, month='') {
-  return state.notes.filter(n=>n.childId===childId&&(!month||String(n.date||'').startsWith(month))).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.startTime).localeCompare(String(a.startTime)));
-}
-function totals(records) {
-  const income=records.filter(r=>r.type==='income').reduce((s,r)=>s+Number(r.amount||0),0);
-  const expense=records.filter(r=>r.type==='expense').reduce((s,r)=>s+Number(r.amount||0),0);
-  return {income,expense,net:income-expense};
-}
-function renderChild(child) {
-  const records=childRecords(child.id);
-  const currentTotals=totals(records.filter(r=>String(r.date||'').startsWith(thisMonth())));
-  const tabs=[['ledger','收支明細'],['month','月份統計'],['notes','簡易記事']];
-  let body='';
-  if(childTab==='ledger') body=renderLedger(child,records);
-  else if(childTab==='month') body=renderMonth(child,records);
-  else body=renderNotes(child);
-  shell(`
-    <section class="panel">
-      <div class="section-head"><div><button class="soft small" data-action="back-home">← 返回孩童列表</button><h2 style="margin-top:10px">🧸 ${esc(child.name)}${child.status==='archived'?' <span class="subtle">（已離托）</span>':''}</h2><div class="subtle">個別收支、禮金與照顧記事</div></div><div class="toolbar"><button class="soft small" data-action="edit-child" data-id="${esc(child.id)}">編輯資料</button></div></div>
-      <div class="summary-grid"><div class="summary-card"><span>本月收入</span><strong class="income">${money(currentTotals.income)}</strong></div><div class="summary-card"><span>本月支出／退費</span><strong class="expense">${money(currentTotals.expense)}</strong></div><div class="summary-card"><span>本月收入淨額</span><strong class="net">${money(currentTotals.net)}</strong></div></div>
-      <div class="tab-row">${tabs.map(([key,label])=>`<button class="tab ${childTab===key?'active':''}" data-action="child-tab" data-tab="${key}">${label}</button>`).join('')}</div>
-      ${body}
-    </section>
-    <section class="panel"><div class="section-head"><h3>孩童資料管理</h3></div><div class="toolbar">${child.status==='archived'?`<button class="secondary" data-action="restore-child" data-id="${esc(child.id)}">恢復收托</button>`:`<button class="danger" data-action="archive-child" data-id="${esc(child.id)}">設為已離托</button>`}</div><p class="helper">設為已離托不會刪除任何收入、支出或簡易記事；日後可從「已離托」名單恢復。</p></section>
-  `);
-}
-function renderLedger(child,records) {
-  const monthRecords=selectedMonth==='all'?records:records.filter(r=>String(r.date||'').startsWith(selectedMonth));
-  const t=totals(monthRecords);
-  return `<div class="section-head"><div><h3>逐筆收支紀錄</h3><div class="subtle">依日期由新到舊排列</div></div><div class="toolbar">${child.status==='archived'?'<span class="subtle">已離托資料僅供查閱與修正</span>':'<button class="primary" data-action="add-transaction" data-type="income">＋ 收入</button><button class="secondary" data-action="add-transaction" data-type="expense">＋ 支出</button>'}</div></div>
-    <div class="toolbar" style="margin-bottom:12px"><select id="ledgerMonth" class="month-picker"><option value="all" ${selectedMonth==='all'?'selected':''}>全部月份</option>${monthOptions(records,selectedMonth)}</select></div>
-    <div class="summary-grid"><div class="summary-card"><span>收入</span><strong class="income">${money(t.income)}</strong></div><div class="summary-card"><span>支出／退費</span><strong class="expense">${money(t.expense)}</strong></div><div class="summary-card"><span>淨額</span><strong class="net">${money(t.net)}</strong></div></div>
-    ${monthRecords.length?`<div class="record-list">${monthRecords.map(renderTransaction).join('')}</div>`:`<div class="empty">這個期間還沒有收支紀錄。<br>可使用上方「收入」或「支出」新增第一筆資料。</div>`}`;
-}
-function monthOptions(records,selected) {
-  const months=[...new Set(records.map(r=>String(r.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
-  if(!months.includes(thisMonth())) months.unshift(thisMonth());
-  return months.map(m=>`<option value="${esc(m)}" ${selected===m?'selected':''}>${esc(m.replace('-',' 年 '))} 月</option>`).join('');
-}
-function renderTransaction(t) {
-  const isIncome=t.type==='income';
-  const gift=t.categoryId==='cat_gift'||t.category==='禮金'||Number(t.giftCash||0)>0||t.giftItemName;
-  let extras='';
-  if(gift){const details=[t.giftFestival,t.giftItemName,t.giftItemValue?`禮品估值 ${money(t.giftItemValue)}`:''].filter(Boolean).join('・');if(details)extras=`<div class="record-meta">${esc(details)}</div>`;}
-  return `<div class="record"><div class="record-main"><div class="record-title">${esc(t.category|| (isIncome?'收入':'支出'))}${gift?' 🎁':''}</div><div class="record-meta">${esc(t.date||'')}${t.paymentMethod?'・'+esc(t.paymentMethod):''}${t.note?'・'+esc(t.note):''}</div>${extras}</div><div class="record-amount ${isIncome?'income':'expense'}">${isIncome?'+':'−'}${money(t.amount)}</div><div class="record-actions"><button class="soft small" data-action="edit-transaction" data-id="${esc(t.id)}">編輯</button><button class="danger small" data-action="delete-transaction" data-id="${esc(t.id)}">刪除</button></div></div>`;
-}
-function renderMonth(child,records) {
-  const list=records.filter(r=>String(r.date||'').startsWith(selectedMonth));
-  const t=totals(list);
-  const groups={};
-  list.forEach(r=>{const key=(r.type==='income'?'收入｜':'支出｜')+(r.category||'未分類');groups[key]=(groups[key]||0)+Number(r.amount||0);});
-  return `<div class="section-head"><div><h3>月份收支統計</h3><div class="subtle">依月份彙整 ${esc(child.name)} 的逐筆紀錄</div></div>${child.status==='archived'?'':'<button class="primary" data-action="add-transaction" data-type="income">＋ 新增紀錄</button>'}</div>
-    <div class="toolbar" style="margin-bottom:12px"><input id="monthPicker" class="month-picker" type="month" value="${esc(selectedMonth)}"></div>
-    <div class="summary-grid"><div class="summary-card"><span>當月收入</span><strong class="income">${money(t.income)}</strong></div><div class="summary-card"><span>當月支出／退費</span><strong class="expense">${money(t.expense)}</strong></div><div class="summary-card"><span>當月收入淨額</span><strong class="net">${money(t.net)}</strong></div></div>
-    <h3 style="font-size:15px">項目分類小計</h3>${Object.keys(groups).length?Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="category-breakdown"><span>${esc(k)}</span><strong>${money(v)}</strong></div>`).join(''):`<div class="empty">這個月份沒有紀錄。</div>`}
-    <hr class="divider"><h3 style="font-size:15px">本月逐筆明細</h3>${list.length?`<div class="record-list">${[...list].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(renderTransaction).join('')}</div>`:''}`;
-}
-function renderAnalysisCategoryRows(map,type,total){
-  const entries=Object.entries(map||{}).sort((a,b)=>Number(b[1])-Number(a[1]));
-  if(!entries.length)return '<div class="chart-empty">這個月份沒有相關紀錄。</div>';
-  const max=Math.max(1,...entries.map(x=>Number(x[1])||0));
-  return entries.map(([name,value])=>{
-    const amount=Math.max(0,Number(value)||0);
-    const width=Math.max(0,Math.min(100,amount/max*100));
-    const pct=total>0?amount/total*100:0;
-    return `<div class="chart-row"><div class="chart-row-head"><span>${esc(name)}</span><strong>${money(amount)} <span class="subtle">${pct.toFixed(1)}%</span></strong></div><div class="chart-track"><div class="chart-fill ${type}" style="width:${width}%"></div></div></div>`;
-  }).join('');
-}
-function buildAnalysisMonths(anchor,count=6){
-  const [year,month]=String(anchor||thisMonth()).split('-').map(Number);
-  return Array.from({length:count},(_,i)=>{
-    const d=new Date(year,month-1-(count-1-i),1);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  });
-}
-function monthRangeList(startMonth,endMonth){
-  const s=String(startMonth||thisMonth()).split('-').map(Number),e=String(endMonth||thisMonth()).split('-').map(Number);
-  let y=s[0],m=s[1],ey=e[0],em=e[1];
-  if(!y||!m||!ey||!em)return [thisMonth()];
-  const result=[];let guard=0;
-  while((y<ey||(y===ey&&m<=em))&&guard++<120){result.push(`${y}-${String(m).padStart(2,'0')}`);m++;if(m>12){m=1;y++;}}
-  return result.length?result:[thisMonth()];
-}
-function renderAnalysisTrend(scopeId,startMonth,endMonth){
-  const months=monthRangeList(startMonth,endMonth);
-  const chartMonths=months.length>12?months.slice(-12):months;
-  const rows=chartMonths.map(m=>{
-    const records=state.transactions.filter(r=>String(r.date||'').startsWith(m)&&(scopeId==='*'||String(r.childId)===String(scopeId)));
-    return {month:m,...totals(records)};
-  });
-  const max=Math.max(1,...rows.flatMap(r=>[r.income,r.expense]));
-  return `<div class="analysis-chart-card"><h3>期間內每月收支趨勢</h3><div class="chart-legend"><span><i class="legend-dot income"></i>收入</span><span><i class="legend-dot expense"></i>支出／退費</span></div><div class="trend-chart" style="grid-template-columns:repeat(${rows.length},minmax(0,1fr))">${rows.map(r=>{
-    const ih=r.income?Math.max(2,r.income/max*100):0,eh=r.expense?Math.max(2,r.expense/max*100):0;
-    return `<div class="trend-month"><div class="trend-bars"><div class="trend-bar income" style="height:${ih}%" title="${esc(r.month)} 收入 ${money(r.income)}"></div><div class="trend-bar expense" style="height:${eh}%" title="${esc(r.month)} 支出 ${money(r.expense)}"></div></div><div class="trend-label">${esc(r.month.slice(2).replace('-','/'))}</div></div>`;
-  }).join('')}</div><div class="helper" style="margin-top:8px">${months.length>12?'區間超過 12 個月，趨勢圖顯示最近 12 個月；上方總額、分類及明細仍依完整期間計算。':'依選定的起訖月份逐月比較。'}</div></div>`;
-}
-function renderAnalysisChildChart(byChild){
-  if(!byChild.length)return '<div class="chart-empty">這段期間還沒有孩童收支紀錄。</div>';
-  const max=Math.max(1,...byChild.flatMap(x=>[x.total.income,x.total.expense]));
-  return byChild.map(x=>{
-    const incomeWidth=Math.max(0,Math.min(100,x.total.income/max*100));
-    const expenseWidth=Math.max(0,Math.min(100,x.total.expense/max*100));
-    return `<div class="child-chart-row"><div class="child-chart-title">${esc(x.child.name)}${x.child.status==='archived'?'（已離托）':''}</div><div class="child-chart-pair"><span class="income">收</span><div class="chart-track"><div class="chart-fill income" style="width:${incomeWidth}%"></div></div><strong>${money(x.total.income)}</strong></div><div class="child-chart-pair"><span class="expense">支</span><div class="chart-track"><div class="chart-fill expense" style="width:${expenseWidth}%"></div></div><strong>${money(x.total.expense)}</strong></div></div>`;
-  }).join('');
-}
-function renderAnalysis() {
-  currentPage='analysis';currentChildId=null;
-  let startMonth=analysisStartMonth||buildAnalysisMonths(thisMonth(),6)[0];
-  let endMonth=analysisEndMonth||thisMonth();
-  if(startMonth>endMonth){const temp=startMonth;startMonth=endMonth;endMonth=temp;analysisStartMonth=startMonth;analysisEndMonth=endMonth;}
-  analysisMonth=endMonth;
-  const inRange=r=>{const m=String(r.date||'').slice(0,7);return m>=startMonth&&m<=endMonth;};
-  const allRecords=state.transactions.filter(inRange);
-  const selectedRecords=analysisChildId==='*'?allRecords:allRecords.filter(r=>String(r.childId)===String(analysisChildId));
-  const t=totals(selectedRecords);
-  const group={income:{},expense:{}};
-  selectedRecords.forEach(r=>{const type=r.type==='expense'?'expense':'income',name=r.category||'未分類';group[type][name]=(group[type][name]||0)+Number(r.amount||0);});
-  const children=state.children.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'zh-TW'));
-  const byChild=children.map(c=>({child:c,total:totals(selectedRecords.filter(r=>String(r.childId)===String(c.id)))})).filter(x=>x.total.income||x.total.expense);
-  const scopeName=analysisChildId==='*'?'所有孩童':(children.find(c=>String(c.id)===String(analysisChildId))?.name||'指定孩童');
-  const compareMax=Math.max(1,t.income,t.expense);
-  const rangeLabel=startMonth===endMonth?startMonth:`${startMonth} ～ ${endMonth}`;
-  shell(`<section class="panel">
-    <div class="section-head"><div><button class="soft small" data-action="back-home">← 返回上一頁</button><h2 style="margin-top:10px">📊 收支明細分析</h2><div class="subtle">可跨月份及較長期間統計，包含已離托孩童的歷史紀錄</div></div></div>
-    <div class="analysis-controls">
-      <div class="field"><label>分析對象</label><select class="month-picker" id="analysisScope"><option value="*" ${analysisChildId==='*'?'selected':''}>所有孩童總計</option>${children.map(c=>`<option value="${esc(c.id)}" ${String(analysisChildId)===String(c.id)?'selected':''}>${esc(c.name)}${c.status==='archived'?'（已離托）':''}</option>`).join('')}</select></div>
-      <div class="field"><label>開始月份</label><input class="month-picker" type="month" id="analysisStartMonth" value="${esc(startMonth)}"></div>
-      <div class="field"><label>結束月份</label><input class="month-picker" type="month" id="analysisEndMonth" value="${esc(endMonth)}"></div>
-    </div>
-    <div class="global-setting-note">目前檢視：${esc(scopeName)}・${esc(rangeLabel)}</div>
-    <div class="summary-grid"><div class="summary-card"><span>期間收入總額</span><strong class="income">${money(t.income)}</strong></div><div class="summary-card"><span>期間支出／退費</span><strong class="expense">${money(t.expense)}</strong></div><div class="summary-card"><span>期間收入淨額</span><strong class="net">${money(t.net)}</strong></div></div>
-    <div class="analysis-chart-card"><h3>期間收入與支出比較</h3><div class="chart-row"><div class="chart-row-head"><span>收入</span><strong class="income">${money(t.income)}</strong></div><div class="chart-track"><div class="chart-fill income" style="width:${Math.max(0,t.income/compareMax*100)}%"></div></div></div><div class="chart-row"><div class="chart-row-head"><span>支出／退費</span><strong class="expense">${money(t.expense)}</strong></div><div class="chart-track"><div class="chart-fill expense" style="width:${Math.max(0,t.expense/compareMax*100)}%"></div></div></div></div>
-    <div class="analysis-chart-grid"><div class="analysis-chart-card"><h3>收入項目分布</h3>${renderAnalysisCategoryRows(group.income,'income',t.income)}</div><div class="analysis-chart-card"><h3>支出項目分布</h3>${renderAnalysisCategoryRows(group.expense,'expense',t.expense)}</div></div>
-    ${renderAnalysisTrend(analysisChildId,startMonth,endMonth)}
-    ${analysisChildId==='*'?`<div class="analysis-chart-card"><h3>各孩童收支比較</h3>${renderAnalysisChildChart(byChild)}</div><hr class="divider"><h3 style="font-size:16px;margin:8px 0">各孩童期間小計</h3><div class="child-analysis-row child-analysis-head"><span>孩童</span><span>收入</span><span>支出</span><span>淨額</span></div>${byChild.length?byChild.map(x=>`<div class="child-analysis-row"><strong>${esc(x.child.name)}${x.child.status==='archived'?'（已離托）':''}</strong><span class="income">${money(x.total.income)}</span><span class="expense">${money(x.total.expense)}</span><strong class="child-net ${x.total.net>=0?'net':'expense'}">${money(x.total.net)}</strong></div>`).join(''):'<div class="empty">這段期間還沒有孩童收支紀錄。</div>'}`:''}
-    <hr class="divider"><h3 style="font-size:16px;margin:8px 0">期間逐筆明細（${selectedRecords.length} 筆）</h3>
-    ${selectedRecords.length?`<div class="record-list">${selectedRecords.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(r=>{const c=children.find(x=>String(x.id)===String(r.childId));return `<div class="record"><div class="record-main"><div class="record-title">${esc(r.category||'未分類')} <span class="subtle">・${esc(c?.name||'未知孩童')}</span></div><div class="record-meta">${esc(r.date||'')}${r.note?'・'+esc(r.note):''}</div></div><div class="record-amount ${r.type==='income'?'income':'expense'}">${r.type==='income'?'+':'−'}${money(r.amount)}</div></div>`;}).join('')}</div>`:'<div class="empty">沒有符合期間的逐筆明細。</div>'}
-  </section>`);
-}
-
-
-function settlementRules(){
-  const raw=state.settings.settlementRules||{};
-  const asRatio=(v,fallback)=>v!==undefined&&v!==null&&v!==''&&Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=1?Number(v):fallback;
-  const monthKeys=Object.keys(state.settings.monthlySettlements||{}).sort().reverse();
-  const latest=monthKeys.length?(state.settings.monthlySettlements[monthKeys[0]]||{}):{};
-  return {generalRatio:asRatio(raw.generalRatio,asRatio(latest.generalRatio,1/3)),foodRatio:asRatio(raw.foodRatio,asRatio(latest.foodRatio,1/3))};
-}
-function settlementRulesForm(){
-  const r=settlementRules();
-  openModal('分帳規則設定',`<p class="helper">設定每月分帳的預設比例。一般收入與副食品費分開計算；每個月份仍可在結算頁輸入該月手動金額。</p><div class="field"><label>一般收入分帳比例（%）</label><input name="generalRatio" type="number" min="0" max="100" step="0.1" required value="${(r.generalRatio*100).toFixed(1)}"></div><div class="field"><label>副食品費分帳比例（%）</label><input name="foodRatio" type="number" min="0" max="100" step="0.1" required value="${(r.foodRatio*100).toFixed(1)}"></div><div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存分帳規則</button></div>`,'settlementRules');
-}
-function settlementData(month){
-  const all=state.settings.monthlySettlements||{};
-  const raw=all[month]||{};
-  const rules=settlementRules();
-  return {
-    generalRatio:raw.generalRatio!==undefined&&raw.generalRatio!==''?Number(raw.generalRatio):rules.generalRatio,
-    foodRatio:raw.foodRatio!==undefined&&raw.foodRatio!==''?Number(raw.foodRatio):rules.foodRatio,
-    generalOverride:raw.generalOverride??'',foodOverride:raw.foodOverride??'',
-    coworkerAdvances:Array.isArray(raw.coworkerAdvances)?raw.coworkerAdvances:[],
-    // 舊版「代墊物品」曾直接從應付同事金額扣除，沿用為「工作室代墊同事」以保持舊結算結果一致。
-    studioAdvances:Array.isArray(raw.studioAdvances)?raw.studioAdvances:(Array.isArray(raw.advances)?raw.advances:[]),
-    memo:raw.memo||''
+function rememberIdentity(profile){
+  const previous=state.identity||{name:'',phone:''};
+  const next={
+    name:profile&&profile.name!==undefined?String(profile.name):String(previous.name||''),
+    phone:profile&&profile.phone!==undefined?String(profile.phone):String(previous.phone||'')
   };
+  state.identity=next;
+  try{
+    if(next.name||next.phone)localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(next));
+    else localStorage.removeItem(PROFILE_STORAGE_KEY);
+  }catch(e){/* 無痕模式或瀏覽器停用儲存空間時，仍可正常填寫問卷。 */}
+  return next;
 }
-function settlementCalc(month,d){
-  const rows=state.transactions.filter(t=>String(t.date||'').startsWith(month)&&t.type==='income');
-  const foodRows=rows.filter(t=>/副食品/.test(String(t.category||'')));
-  const foodByChild=Object.values(foodRows.reduce((acc,t)=>{const key=String(t.childId||'');if(!acc[key])acc[key]={childId:key,amount:0};acc[key].amount+=Number(t.amount||0);return acc;},{}));
-  const generalRows=rows.filter(t=>!/副食品/.test(String(t.category||'')));
-  const totalIncome=rows.reduce((a,t)=>a+Number(t.amount||0),0);
-  const generalTotal=generalRows.reduce((a,t)=>a+Number(t.amount||0),0);
-  const foodTotal=foodRows.reduce((a,t)=>a+Number(t.amount||0),0);
-  const generalShare=d.generalOverride!==''&&d.generalOverride!=null?Number(d.generalOverride):Math.round(generalTotal*Number(d.generalRatio??1/3));
-  const foodShare=d.foodOverride!==''&&d.foodOverride!=null?Number(d.foodOverride):Math.round(foodTotal*Number(d.foodRatio??1/3));
-  const coworkerAdvances=(d.coworkerAdvances||[]).reduce((a,x)=>a+Number(x.amount||0),0);
-  const studioAdvances=(d.studioAdvances||[]).reduce((a,x)=>a+Number(x.amount||0),0);
-  const entitled=generalShare+foodShare;
-  const due=entitled+coworkerAdvances-studioAdvances;
-  return {totalIncome,generalTotal,foodTotal,generalShare,foodShare,entitled,coworkerAdvances,studioAdvances,due,studioIncome:totalIncome-due,foodRows,foodByChild};
-}
-function renderAdvanceRows(rows,type){
-  if(!rows.length)return '<div class="empty">尚無代墊紀錄。</div>';
-  return rows.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>`<div class="advance-row"><div class="advance-main"><b>${esc(a.item||a.detail||'未填明細')}</b><div class="subtle">${esc(a.date||'')}${a.note?'・'+esc(a.note):''}</div></div><strong>${money(a.amount)}</strong><div class="toolbar"><button class="soft small" data-action="edit-advance" data-id="${esc(a.id)}" data-advance-type="${type}">編輯</button><button class="danger small" data-action="delete-advance" data-id="${esc(a.id)}" data-advance-type="${type}">刪除</button></div></div>`).join('');
-}
-function renderSettlement(){
-  currentPage='settlement';currentChildId=null;
-  const month=analysisMonth||thisMonth(),d=settlementData(month),c=settlementCalc(month,d);
-  const allMonths=Object.keys(state.settings.monthlySettlements||{}).sort().reverse();
-  const legacyUnclassified=Array.isArray((state.settings.monthlySettlements||{})[month]?.advances)&&!Array.isArray((state.settings.monthlySettlements||{})[month]?.studioAdvances);
-  shell(`<section class="panel"><div class="section-head"><div><button class="soft small" data-action="back-home">← 返回首頁</button><h2 style="margin-top:10px">🤝 ${esc(month)} 分帳結算</h2><div class="subtle">每個月份獨立計算，不跨月合併</div></div></div>
-    <div class="field"><label>結算月份</label><input class="month-picker" id="settlementMonth" type="month" value="${esc(month)}"></div>
-    <div class="settlement-grid">
-      <div class="settlement-card"><h3>一般收入分帳</h3><div class="subtle">當月一般收入合計（不含副食品費）</div><div class="settlement-total">${money(c.generalTotal)}</div><div class="subtle">分帳比例：${(d.generalRatio*100).toFixed(1)}%</div><div class="field" style="margin-top:10px"><label>本月手動分帳金額（選填，留空依比例計算）</label><input id="generalOverride" type="number" min="0" step="1" placeholder="依預設比例計算" value="${esc(d.generalOverride)}"></div><div class="subtle">目前分帳金額：<b>${money(c.generalShare)}</b></div></div>
-      <div class="settlement-card"><h3>副食品費分帳</h3><div class="subtle">所有孩童當月副食品費總額</div><div class="settlement-total">${money(c.foodTotal)}</div><div class="subtle" style="margin:8px 0">${c.foodByChild.length?c.foodByChild.map(t=>{const ch=state.children.find(x=>String(x.id)===String(t.childId));return `<div>${esc(ch?.name||'未知孩童')}：${money(t.amount)}</div>`;}).join(''):'尚無副食品費收入紀錄'}</div><div class="subtle">分帳比例：${(d.foodRatio*100).toFixed(1)}%</div><div class="field" style="margin-top:10px"><label>本月手動分帳金額（選填，留空依比例計算）</label><input id="foodOverride" type="number" min="0" step="1" placeholder="依預設比例計算" value="${esc(d.foodOverride)}"></div><div class="subtle">目前分帳金額：<b>${money(c.foodShare)}</b></div></div>
-    </div>
-    <div class="settlement-card"><div class="section-head"><div><h3>同事代墊工作室款項</h3><div class="helper">同事先替工作室付款，增加同事應領金額。</div></div><button class="secondary small" data-action="add-advance" data-advance-type="coworker">＋ 新增代墊</button></div>${renderAdvanceRows(d.coworkerAdvances,'coworker')}<div class="category-breakdown"><span>同事代墊合計</span><strong>${money(c.coworkerAdvances)}</strong></div></div>
-    <div class="settlement-card"><div class="section-head"><div><h3>工作室代墊同事款項</h3><div class="helper">工作室先替同事付款，從同事應領金額扣除。</div></div><button class="secondary small" data-action="add-advance" data-advance-type="studio">＋ 新增代墊</button></div>${renderAdvanceRows(d.studioAdvances,'studio')}<div class="category-breakdown"><span>工作室代墊合計</span><strong>${money(c.studioAdvances)}</strong></div></div>
-    ${legacyUnclassified?'<div class="helper">舊版代墊紀錄已依原本「從應付金額扣除」的方式保留為工作室代墊同事款項。</div>':''}
-    <div class="settlement-card"><h3>本月結算結果</h3><div class="category-breakdown"><span>應領（一般收入＋副食品費）</span><b>${money(c.entitled)}</b></div><div class="category-breakdown"><span>同事代墊</span><b class="income">＋${money(c.coworkerAdvances)}</b></div><div class="category-breakdown"><span>工作室代墊</span><b class="expense">−${money(c.studioAdvances)}</b></div><div class="category-breakdown"><strong>應付同事</strong><strong class="settlement-total">${money(c.due)}</strong></div><div class="global-setting-note">應付＝應領＋同事代墊－工作室代墊。這裡只計算應付金額，不記錄已付／未付狀態；實際付款請以存摺或簽收條為準。</div><div class="category-breakdown"><span>分帳後工作室收入（原始收入－應付）</span><strong class="income">${money(c.studioIncome)}</strong></div><div class="modal-actions"><button class="primary" data-action="save-settlement">儲存本月結算</button></div></div>
-    <div class="settlement-card"><h3>歷史結算月份</h3>${allMonths.length?allMonths.map(m=>`<button class="soft small" style="margin:3px" data-action="open-settlement-month" data-month="${esc(m)}">${esc(m)}</button>`).join(''):'<div class="helper">儲存代墊或結算後會保留每月歷史紀錄。</div>'}</div>
-  </section>`);
-}
-function advanceForm(item={},advanceType='coworker'){
-  const label=advanceType==='coworker'?'同事代墊工作室':'工作室代墊同事';
-  openModal(item.id?`編輯${label}明細`:`新增${label}明細`,`<div class="field"><label>日期</label><input name="date" type="date" required value="${esc(item.date||today())}"></div><div class="field"><label>明細</label><input name="item" required maxlength="120" value="${esc(item.item||item.detail||'')}" placeholder="例如：尿布、副食品、教具或用品"></div><div class="field"><label>金額</label><input name="amount" type="number" min="1" step="1" required value="${item.amount??''}"></div><div class="field"><label>備註（選填）</label><textarea name="note" placeholder="補充說明">${esc(item.note||'')}</textarea></div><div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存</button></div>`,'advance');
-  $('#modalForm').dataset.id=item.id||'';$('#modalForm').dataset.advanceType=advanceType;
-}
-function collectSettlementForm(monthOverride=''){
-  const month=monthOverride||$('#settlementMonth')?.value||thisMonth(),d=settlementData(month);
-  const generalOverride=$('#generalOverride')?.value??d.generalOverride;
-  const foodOverride=$('#foodOverride')?.value??d.foodOverride;
-  if((generalOverride!==''&&(!Number.isFinite(Number(generalOverride))||Number(generalOverride)<0))||(foodOverride!==''&&(!Number.isFinite(Number(foodOverride))||Number(foodOverride)<0)))throw new Error('本月手動分帳金額不可小於 0，且必須是有效數字。');
-  d.generalOverride=generalOverride;d.foodOverride=foodOverride;
-  return {month,d};
+const state = {
+  publicData:initialPublicCache, surveys:initialPublicCache?initialPublicCache.surveys:[], hasLoadedPublic:false, cloudUnavailable:false, cloudMessage:'', admin:false, token:'', adminTab:'surveys',
+  activeSurvey:null, editingResponse:null, identity:readRememberedIdentity(), lookupSurveyId:'',
+  adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
+  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
+};
+let deferredInstallPrompt = null;
+const $ = id => document.getElementById(id);
+if ($('logoImage') && window.__JQ_LOGO_URL__) $('logoImage').src = window.__JQ_LOGO_URL__;
+// 管理者入口：在左上角 Logo 連續點擊五次，即可開啟管理者登入視窗。
+$('logoTap').addEventListener('click',()=>{
+  state.logoClicks++;
+  clearTimeout(state.logoTimer);
+  state.logoTimer=setTimeout(()=>{state.logoClicks=0;},1800);
+  if(state.logoClicks>=5){
+    state.logoClicks=0;
+    clearTimeout(state.logoTimer);
+    if(state.admin){loadAdmin();}else{adminLoginDialog();}
+  }
+});
+const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => '$' + Number(n || 0).toLocaleString('zh-TW',{maximumFractionDigits:2});
+const dateText = value => { if(!value)return ''; const d=new Date(value); return isNaN(d.getTime())?String(value):d.toLocaleString('zh-TW',{hour12:false}); };
+function toast(message){const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toast._timer);toast._timer=setTimeout(()=>el.classList.add('hidden'),3200)}
+function setBusy(on){document.body.classList.toggle('loading',!!on)}
+function showModal(html){$('modalRoot').innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`}
+function closeModal(){$('modalRoot').innerHTML=''}
+function setStatus(text,ok=true){
+  const el=$('syncStatus');if(!el)return;
+  el.textContent=text||'';
+  el.classList.toggle('error',!ok);
+  el.classList.toggle('syncing',!!text&&/(同步|確認|連線|讀取)/.test(text)&&ok);
+  el.onclick=ok?null:retryCloudConnection;
+  el.style.cursor=ok?'default':'pointer';
+  el.title=ok?'':'點擊重新連線';
 }
 
-function renderNotes(child) {
-  const list=childNotes(child.id,selectedMonth==='all'?'':selectedMonth);
-  return `<div class="section-head"><div><h3>照顧與到托簡易記事</h3><div class="subtle">填寫開始、結束時間，自動計算時數</div></div>${child.status==='archived'?'':'<button class="primary" data-action="add-note">＋ 新增記事</button>'}</div>
-    <div class="toolbar" style="margin-bottom:12px"><select id="noteMonth" class="month-picker"><option value="all" ${selectedMonth==='all'?'selected':''}>全部月份</option>${monthOptions(state.notes.filter(n=>n.childId===child.id),selectedMonth)}</select></div>
-    ${list.length?`<div class="record-list">${list.map(n=>`<div class="note-card"><div class="section-head" style="margin:0"><h4>${esc(n.type||'記事')}</h4><strong>${Number(n.durationMinutes||0)?(Number(n.durationMinutes)/60).toFixed(2).replace(/\.00$/,'')+' 小時':''}</strong></div><p>📅 ${esc(n.date||'')}　${esc(n.startTime||'未填')}–${esc(n.endTime||'未填')}</p>${n.note?`<p>${esc(n.note)}</p>`:''}<div class="toolbar"><button class="soft small" data-action="edit-note" data-id="${esc(n.id)}">編輯</button><button class="danger small" data-action="delete-note" data-id="${esc(n.id)}">刪除</button></div></div>`).join('')}</div>`:`<div class="empty">還沒有簡易記事。<br>可記錄生病、臨托、延托或當日到托時數。</div>`}`;
+function makeBridgeNonce(){
+  try{return Array.from(crypto.getRandomValues(new Uint8Array(18))).map(x=>x.toString(16).padStart(2,'0')).join('')}
+  catch(e){return 'jq'+Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
 }
-function renderSettings() {
-  currentPage='settings';
-  shell(`<section class="panel"><div class="section-head"><div><button class="soft small" data-action="back-home">← 返回上一頁</button><h2 style="margin-top:10px">設定與資料管理</h2></div></div>
-    <div class="settings-list">
-      <button class="setting-tile" data-action="manage-categories"><strong>🧾 收入／支出項目設定</strong><span class="subtle">全體孩童共用，可新增、編輯、停用及排序</span></button>
-      <button class="setting-tile" data-action="manage-note-types"><strong>📝 簡易記事類型設定</strong><span class="subtle">全體孩童共用，可自由新增、編輯、停用及排序</span></button>
-      <button class="setting-tile" data-action="settlement-rules"><strong>⚖️ 分帳規則設定</strong><span class="subtle">設定一般收入及副食品費的預設分帳比例；每月結算時可另作調整</span></button>
-    </div>
-    <hr class="divider"><h3 style="font-size:16px">備份與還原</h3>
-    <div class="backup-grid">
-      <button class="backup-tile backup-cloud" data-action="cloud-backup">☁️ 雲端備份<span>立即保存最新雲端帳目</span></button>
-      <button class="backup-tile backup-restore" data-action="cloud-restore">♻️ 雲端還原<span>還原雲端備份資料</span></button>
-      <button class="backup-tile backup-local" data-action="local-backup">📥 本機備份<span>下載 JSON 備份檔</span></button>
-      <button class="backup-tile backup-local" data-action="local-restore">📤 本機還原<span>從裝置匯入備份檔</span></button>
-    </div>
-    <div class="global-setting-note">收入／支出項目及簡易記事類型皆為全體孩童共用設定。修改一次，所有收托中及已離托孩童的新增表單都會套用同一套項目；已存在的歷史紀錄不會被改寫或刪除。</div>
-    <p class="helper">雲端總控試算表包含「孩童資料、收支明細、簡易記事、項目設定、系統設定」五個工作表。收入與支出採逐筆記錄；禮品價值為備註性估值，收入統計只計入實際現金金額。</p>
-  </section>`);
+function isTrustedGasOrigin(origin){
+  try{
+    const host=new URL(origin).hostname.toLowerCase();
+    // Apps Script HTML Service 的實際 sandbox host 常是 n-xxxx-0lu-script.googleusercontent.com，
+    // 注意它前面是連字號，不是 .script.googleusercontent.com。
+    return host==='script.google.com'||
+      host==='script.googleusercontent.com'||
+      host.endsWith('.script.googleusercontent.com')||
+      /^[a-z0-9-]+-script\.googleusercontent\.com$/.test(host);
+  }catch(e){return false}
 }
+function setupBridge(){
+  if(!GAS_EXEC_URL || GAS_EXEC_URL.indexOf('https://script.google.com/macros/s/')!==0){
+    setStatus('待設定 API',false);renderBridgeSetup();return;
+  }
+  const frame=$('gasBridge');
+  const nonce=makeBridgeNonce();
+  state.bridgeNonce=nonce;
 
-function openModal(title,inner,formName='') {
-  $('#modalRoot').innerHTML=`<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true"><h3>${title}</h3>${formName?`<form id="modalForm" data-form="${formName}">` : ''}${inner}${formName?'</form>':''}</div></div>`;
+  // 收到 GAS 內層 sandbox frame 傳來的 MessagePort 後，後續 API 全走該 Port。
+  // 這可避免 GitHub 只把訊息送到 GAS 外層 iframe、內層 userCodeAppPanel 收不到的巢狀 iframe 問題。
+  window.addEventListener('message',event=>{
+    if(!isTrustedGasOrigin(event.origin)||!event.data||event.data.channel!==CHANNEL||event.data.nonce!==nonce)return;
+    if(event.data.type==='ready'){
+      const port=event.ports&&event.ports[0];
+      if(!port){showCloudUnavailable('GAS 已載入，但沒有提供安全訊息通道。請確認 GAS 部署版本及存取權限。');return;}
+      if(state.bridgePort){try{state.bridgePort.close()}catch(e){}}
+      state.bridgePort=port;
+      state.bridgePort.onmessage=handleBridgePortMessage;
+      if(state.bridgePort.start)state.bridgePort.start();
+      if(state.bridgeReady)return;
+      state.bridgeReady=true;
+      setStatus('雲端通道已就緒，正在背景同步…');
+      loadPublic();
+      return;
+    }
+    if(event.data.type==='bridge_error'){
+      showCloudUnavailable(event.data.error||'GAS 橋接頁未能啟動。請確認網路及 GAS 部署設定。');
+    }
+  });
+  frame.addEventListener('load',()=>{
+    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立安全通道…');
+  });
+  frame.addEventListener('error',()=>{
+    showCloudUnavailable('瀏覽器無法載入 GAS 橋接頁。請確認網路、部署權限及 GAS 網頁應用程式網址。');
+  });
+  const bridgeUrl=new URL(GAS_EXEC_URL);
+  bridgeUrl.searchParams.set('bridge','1');
+  bridgeUrl.searchParams.set('nonce',nonce);
+  frame.src=bridgeUrl.toString();
+
+  setTimeout(()=>{
+    if(!state.bridgeReady){
+      showCloudUnavailable('雲端安全通道尚未建立（25 秒未收到回應）。目前仍可查看本機保存的問卷清單，請稍後重新連線。');
+    }
+  },25000);
 }
-function closeModal(){ $('#modalRoot').innerHTML=''; }
-function childForm(child={}) {
-  openModal(child.id?'編輯孩童資料':'新增孩童',`<div class="field"><label>孩童姓名</label><input name="name" required maxlength="40" value="${esc(child.name||'')}" placeholder="請輸入孩童姓名"></div><div class="field"><label>備註（選填）</label><textarea name="memo" placeholder="例如：聯絡提醒">${esc(child.memo||'')}</textarea></div><div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button class="primary" type="submit">儲存</button></div>`, 'child');
-  $('#modalForm').dataset.id=child.id||''; $('#modalForm').dataset.status=child.status||'active';
+function handleBridgePortMessage(event){
+  const data=event&&event.data;
+  if(!data||data.channel!==CHANNEL||data.nonce!==state.bridgeNonce)return;
+  if(data.type==='response'){
+    const pending=state.bridgePending.get(data.id);if(!pending)return;
+    clearTimeout(pending.timer);state.bridgePending.delete(data.id);
+    if(data.ok)pending.resolve(data.result);else pending.reject(new Error(data.error||'雲端服務發生錯誤'));
+  }
 }
-function getChildCategories(_childId,type=null) {
-  const list=state.categories.filter(c=>String(c.childId||'')==='*'&&c.active!==false&&c.active!=='false');
-  return (type?list.filter(c=>c.type===type):list).sort((a,b)=>{
-    if(a.type!==b.type)return a.type.localeCompare(b.type);
-    if(a.type==='income'){const ap=String(a.name||'').trim()==='托育費'?0:1,bp=String(b.name||'').trim()==='托育費'?0:1;if(ap!==bp)return ap-bp;}
-    return Number(a.sort)-Number(b.sort);
+function api(method,...args){
+  return new Promise((resolve,reject)=>{
+    if(!state.bridgeReady||!state.bridgePort){reject(new Error('雲端連線尚未就緒，請稍候或重新整理。'));return;}
+    const id='r'+(++state.requestNo)+'_'+Date.now();
+    const timer=setTimeout(()=>{state.bridgePending.delete(id);reject(new Error('雲端回應逾時，請稍後再試。'));},45000);
+    state.bridgePending.set(id,{resolve,reject,timer});
+    try{
+      state.bridgePort.postMessage({channel:CHANNEL,nonce:state.bridgeNonce,type:'request',id,method,args});
+    }catch(err){
+      clearTimeout(timer);state.bridgePending.delete(id);reject(err);
+    }
   });
 }
 
-function transactionForm(type='income',record={}) {
-  const editing=!!record.id; const chosenType=record.type||type;
-  const categories=getChildCategories(currentChildId,chosenType);
-  let previousCategory=record.categoryId?state.categories.find(c=>c.id===record.categoryId):null;
-  if(!previousCategory&&record.categoryId)previousCategory={id:record.categoryId,type:chosenType,name:record.category||'舊項目',active:false,childId:'__legacy__'};
-  if(previousCategory&&!categories.some(c=>c.id===previousCategory.id)) categories.push(previousCategory);
-  const categoryId=record.categoryId||categories[0]?.id||'';
-  const isGift=categoryId==='cat_gift'||categories.find(c=>c.id===categoryId)?.name==='禮金';
-  const categoryOptions=categories.map(c=>`<option value="${esc(c.id)}" ${c.id===categoryId?'selected':''}>${esc(c.name)}${c.active===false||c.active==='false'?'（已停用）':''}</option>`).join('');
-  const amount=record.amount??record.giftCash??'';
-  openModal(editing?'編輯收支紀錄':(chosenType==='income'?'新增收入':'新增支出'),`
-    <div class="form-grid"><div class="field"><label>收支類型</label><select name="type" id="txType"><option value="income" ${chosenType==='income'?'selected':''}>收入</option><option value="expense" ${chosenType==='expense'?'selected':''}>支出／退費</option></select></div><div class="field"><label>日期</label><input type="date" name="date" required value="${esc(record.date||today())}"></div></div>
-    <div class="field"><label>收入／支出項目</label><select name="categoryId" id="txCategory" required>${categoryOptions}</select></div>
-    <div class="field"><label id="amountLabel">${isGift?'現金金額':(chosenType==='income'?'收入金額':'支出金額')}</label><input type="number" name="amount" min="0" step="1" value="${esc(amount)}" placeholder="輸入金額"></div>
-    <div id="giftFields" class="${isGift?'':'hidden'}"><div class="field"><label>節日</label><select name="giftFestival"><option value="">未指定</option>${['過年','端午','中秋'].map(x=>`<option ${record.giftFestival===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>禮品名稱（選填）</label><input name="giftItemName" value="${esc(record.giftItemName||'')}" placeholder="例如：禮盒、玩具"></div><div class="field"><label>禮品價值（選填）</label><input type="number" name="giftItemValue" min="0" step="1" value="${esc(record.giftItemValue||'')}" placeholder="僅供記錄，不列入現金收入統計"></div><p class="helper">禮金可同時記錄現金與禮品，也可以只記錄其中一種。禮品價值不會併入實際現金收入。</p></div>
-    <div class="field"><label>收款／付款方式</label><select name="paymentMethod"><option value="">未指定</option>${['現金','轉帳','其他'].map(x=>`<option ${record.paymentMethod===x?'selected':''}>${x}</option>`).join('')}</select></div>
-    <div class="field"><label>備註</label><textarea name="note" placeholder="可不填">${esc(record.note||'')}</textarea></div>
-    <div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存紀錄</button></div>
-  `,'transaction');
-  $('#modalForm').dataset.id=record.id||''; $('#modalForm').dataset.childId=currentChildId;
-  $('#txType').addEventListener('change',()=>refreshTransactionCategories());
-  $('#txCategory').addEventListener('change',()=>toggleGiftFields());
-  toggleGiftFields();
+function isRunningStandalone(){
+  const modes=['standalone','minimal-ui','fullscreen'];
+  return modes.some(mode=>window.matchMedia&&window.matchMedia(`(display-mode: ${mode})`).matches)
+    || window.navigator.standalone===true;
 }
-function refreshTransactionCategories() {
-  const form=$('#modalForm'); if(!form)return;
-  const type=$('#txType').value;
-  const previous=$('#txCategory').value;
-  const cats=getChildCategories(currentChildId,type);
-  $('#txCategory').innerHTML=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
-  if(cats.some(c=>c.id===previous))$('#txCategory').value=previous;
-  toggleGiftFields();
-  $('#amountLabel').textContent=type==='income'?'收入金額':'支出金額';
+function hideInstallButton(){
+  const strip=$('installStrip');
+  const btn=$('installBtn');
+  if(strip)strip.hidden=true;
+  if(btn)btn.hidden=true;
 }
-function toggleGiftFields() {
-  const id=$('#txCategory')?.value;
-  const cat=state.categories.find(c=>c.id===id);
-  const isGift=id==='cat_gift'||cat?.name==='禮金';
-  $('#giftFields')?.classList.toggle('hidden',!isGift);
-  const label=$('#amountLabel'); if(label)label.textContent=isGift?'現金金額':($('#txType').value==='income'?'收入金額':'支出金額');
-  const amountInput=$('#modalForm [name="amount"]'); if(amountInput)amountInput.required=!isGift;
+function showInstallButton(){
+  const strip=$('installStrip');
+  const btn=$('installBtn');
+  if(strip)strip.hidden=false;
+  if(btn)btn.hidden=false;
 }
-function getNoteTypes() {
-  const defaults=[
-    {id:'note_sick',name:'生病',sort:10,active:true},
-    {id:'note_dropin',name:'臨托',sort:20,active:true},
-    {id:'note_overtime',name:'延托',sort:30,active:true},
-    {id:'note_hours',name:'當日到托時數',sort:40,active:true}
-  ];
-  const stored=state.settings?.noteTypes;
-  if(!Array.isArray(stored)||!stored.length)return defaults;
-  return stored.map((x,i)=>typeof x==='string'?{id:'note_'+i,name:x,sort:(i+1)*10,active:true}:{...x});
-}
-function noteForm(note={}) {
-  const options=getNoteTypes().filter(x=>x.active!==false&&x.active!=='false');
-  if(note.type&&!options.some(x=>x.name===note.type))options.push({id:'legacy_'+note.type,name:note.type,active:false});
-  openModal(note.id?'編輯簡易記事':'新增簡易記事',`
-    <div class="form-grid"><div class="field"><label>日期</label><input type="date" name="date" required value="${esc(note.date||today())}"></div><div class="field"><label>記事類型</label><select name="type">${options.map(x=>`<option value="${esc(x.name)}" ${note.type===x.name?'selected':''}>${esc(x.name)}${x.active===false?'（舊紀錄）':''}</option>`).join('')}</select></div></div>
-    <div class="form-grid"><div class="field"><label>開始時間</label><input id="noteStart" type="time" name="startTime" value="${esc(note.startTime||'')}"></div><div class="field"><label>結束時間</label><input id="noteEnd" type="time" name="endTime" value="${esc(note.endTime||'')}"></div></div>
-    <div class="field"><label>自動計算時數</label><div><span class="duration" id="durationPreview">${formatDuration(note.durationMinutes||0)}</span><div class="helper">例如 08:00 到 18:00，會自動計算為 10 小時。若結束時間早於開始時間，視為跨日。</div></div></div>
-    <div class="field"><label>記事內容／備註</label><textarea name="note" placeholder="可記錄請假原因、臨托狀況或其他提醒">${esc(note.note||'')}</textarea></div>
-    <div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存記事</button></div>
-  `,'note');
-  $('#modalForm').dataset.id=note.id||''; $('#modalForm').dataset.childId=currentChildId;
-  $('#noteStart').addEventListener('input',updateDurationPreview); $('#noteEnd').addEventListener('input',updateDurationPreview);
-}
-
-function durationMinutes(start,end) {
-  if(!start||!end)return 0;
-  const [sh,sm]=start.split(':').map(Number),[eh,em]=end.split(':').map(Number);
-  let diff=eh*60+em-(sh*60+sm); if(diff<0)diff+=1440; return diff;
-}
-function formatDuration(minutes) { return minutes?`${Math.floor(minutes/60)} 小時 ${minutes%60} 分鐘`:'尚未計算'; }
-function updateDurationPreview(){const m=durationMinutes($('#noteStart')?.value,$('#noteEnd')?.value);$('#durationPreview').textContent=formatDuration(m);}
-function categoryManager() {
-  const cats=state.categories.filter(c=>String(c.childId||'')==='*').sort((a,b)=>{if(a.type!==b.type)return a.type.localeCompare(b.type);if(a.type==='income'){const ap=String(a.name||'').trim()==='托育費'?0:1,bp=String(b.name||'').trim()==='托育費'?0:1;if(ap!==bp)return ap-bp;}return Number(a.sort)-Number(b.sort);});
-  openModal('全體孩童共用－收入／支出項目設定',`<p class="helper">這裡修改一次，所有孩童（包含已離托孩童）的新增收支表單都會同步套用。停用不會影響舊帳目。</p>${['income','expense'].map(type=>`<h4>${type==='income'?'收入項目':'支出項目'}</h4>${cats.filter(c=>c.type===type).map(c=>`<div class="category-row"><span class="category-name">${esc(c.name)}${c.active===false||c.active==='false'?'（已停用）':''}</span><button class="soft small" data-action="move-category" data-id="${esc(c.id)}" data-dir="-1">↑</button><button class="soft small" data-action="move-category" data-id="${esc(c.id)}" data-dir="1">↓</button><button class="soft small" data-action="edit-category" data-id="${esc(c.id)}">編輯</button><button class="${c.active===false||c.active==='false'?'secondary':'danger'} small" data-action="toggle-category" data-id="${esc(c.id)}">${c.active===false||c.active==='false'?'啟用':'停用'}</button></div>`).join('')||'<div class="helper">尚無項目</div>'}`).join('<hr class="divider">')}<div class="modal-actions"><button class="secondary" type="button" data-action="new-category" data-type="income">＋ 收入項目</button><button class="secondary" type="button" data-action="new-category" data-type="expense">＋ 支出項目</button><button class="soft" type="button" data-action="close-modal">完成</button></div>`);
-}
-function editCategoryForm(category={}) {
-  openModal(category.id?'編輯項目':'新增項目',`<div class="field"><label>項目類型</label><select name="type" ${category.id?'disabled':''}><option value="income" ${category.type==='income'?'selected':''}>收入</option><option value="expense" ${category.type==='expense'?'selected':''}>支出</option></select></div><div class="field"><label>項目名稱</label><input name="name" required maxlength="30" value="${esc(category.name||'')}" placeholder="例如：副食品、請假退費"></div><div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存</button></div>`,'category');
-  $('#modalForm').dataset.id=category.id||''; $('#modalForm').dataset.childId='*'; $('#modalForm').dataset.sort=category.sort||''; $('#modalForm').dataset.createdAt=category.createdAt||'';
-}
-function noteTypeManager() {
-  const types=getNoteTypes().slice().sort((a,b)=>Number(a.sort)-Number(b.sort));
-  openModal('全體孩童共用－簡易記事類型設定',`<p class="helper">記事類型修改一次，所有孩童新增簡易記事時都會使用同一份清單。停用不會更動已經存在的記事。</p>${types.map(t=>`<div class="category-row"><span class="category-name">${esc(t.name)}${t.active===false||t.active==='false'?'（已停用）':''}</span><button class="soft small" data-action="move-note-type" data-id="${esc(t.id)}" data-dir="-1">↑</button><button class="soft small" data-action="move-note-type" data-id="${esc(t.id)}" data-dir="1">↓</button><button class="soft small" data-action="edit-note-type" data-id="${esc(t.id)}">編輯</button><button class="${t.active===false||t.active==='false'?'secondary':'danger'} small" data-action="toggle-note-type" data-id="${esc(t.id)}">${t.active===false||t.active==='false'?'啟用':'停用'}</button></div>`).join('')}<div class="modal-actions"><button class="secondary" type="button" data-action="new-note-type">＋ 新增記事類型</button><button class="soft" type="button" data-action="close-modal">完成</button></div>`);
-}
-function editNoteTypeForm(type={}) {
-  openModal(type.id?'編輯記事類型':'新增記事類型',`<div class="field"><label>記事類型名稱</label><input name="name" required maxlength="30" value="${esc(type.name||'')}" placeholder="例如：生病、延托、臨托"></div><div class="modal-actions"><button type="button" class="soft" data-action="close-modal">取消</button><button type="submit" class="primary">儲存</button></div>`,'noteType');
-  $('#modalForm').dataset.id=type.id||'';$('#modalForm').dataset.sort=type.sort||'';
-}
-
-async function handleAction(action,el) {
-  const id=el.dataset.id;
-  if(action==='close-modal'){closeModal();return;}
-  if(action==='show-active'){showArchived=false;currentPage='home';renderHome();return;}
-  if(action==='show-archived'){showArchived=true;currentPage='home';renderHome();return;}
-  if(action==='settlement'){analysisMonth=el.dataset.month||thisMonth();currentPage='settlement';pushRouteHistory();renderSettlement();return;}
-  if(action==='settlement-rules'){settlementRulesForm();return;}
-  if(action==='open-settlement-month'){analysisMonth=el.dataset.month||thisMonth();renderSettlement();return;}
-  if(action==='save-settlement'){const {month,d}=collectSettlementForm();const all={...(state.settings.monthlySettlements||{}),[month]:d};await apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]);analysisMonth=month;renderSettlement();showToast('本月分帳結算已儲存');return;}
-  if(action==='add-advance'){const {month,d}=collectSettlementForm();const all={...(state.settings.monthlySettlements||{}),[month]:d};await apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]);const type=el.dataset.advanceType==='studio'?'studio':'coworker';advanceForm({},type);$('#modalForm').dataset.month=month;return;}
-  if(action==='edit-advance'){const {month,d}=collectSettlementForm();const all={...(state.settings.monthlySettlements||{}),[month]:d};await apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]);const type=el.dataset.advanceType==='studio'?'studio':'coworker',key=type==='studio'?'studioAdvances':'coworkerAdvances';const item=(d[key]||[]).find(x=>x.id===id);if(item){advanceForm(item,type);$('#modalForm').dataset.month=month;}return;}
-  if(action==='delete-advance'){const {month,d}=collectSettlementForm();if(!confirm('確定刪除這筆代墊明細？'))return;const type=el.dataset.advanceType==='studio'?'studio':'coworker',key=type==='studio'?'studioAdvances':'coworkerAdvances';d[key]=(d[key]||[]).filter(x=>x.id!==id);const all={...(state.settings.monthlySettlements||{}),[month]:d};await apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]);analysisMonth=month;renderSettlement();showToast('代墊明細已刪除');return;}
-  if(action==='analysis'){analysisChildId='*';analysisMonth=thisMonth();analysisStartMonth=buildAnalysisMonths(thisMonth(),6)[0];analysisEndMonth=thisMonth();currentChildId=null;currentPage='analysis';pushRouteHistory();renderAnalysis();return;}
-  if(action==='open-child'){currentChildId=id;currentPage='home';childTab='ledger';selectedMonth=thisMonth();pushRouteHistory();render();return;}
-  if(action==='back-home'){if(history.length>1){history.back();}else{currentChildId=null;currentPage='home';showArchived=false;renderHome();}return;}
-  if(action==='add-child'){childForm();return;}
-  if(action==='edit-child'){const c=state.children.find(x=>x.id===id);if(c)childForm(c);return;}
-  if(action==='archive-child'||action==='restore-child'){
-    const c=state.children.find(x=>x.id===id);if(!c)return;
-    if(action==='archive-child'&&!confirm(`確定將「${c.name}」設為已離托？歷史紀錄會完整保留。`))return;
-    await apiMutation([{kind:'saveChild',data:{...c,status:action==='archive-child'?'archived':'active',archivedAt:action==='archive-child'?new Date().toISOString():''}}]);
-    showToast(action==='archive-child'?'已移至已離托名單':'已恢復收托');return;
-  }
-  if(action==='child-tab'){childTab=el.dataset.tab;if(childTab==='month'&&selectedMonth==='all')selectedMonth=thisMonth();pushRouteHistory();render();return;}
-  if(action==='add-transaction'){transactionForm(el.dataset.type||'income');return;}
-  if(action==='edit-transaction'){const r=state.transactions.find(x=>x.id===id);if(r)transactionForm(r.type,r);return;}
-  if(action==='delete-transaction'){
-    if(!confirm('確定刪除這筆收支紀錄？'))return;
-    await apiMutation([{kind:'deleteTransaction',data:{id}}]);showToast('收支紀錄已刪除');return;
-  }
-  if(action==='add-note'){noteForm();return;}
-  if(action==='edit-note'){const n=state.notes.find(x=>x.id===id);if(n)noteForm(n);return;}
-  if(action==='delete-note'){
-    if(!confirm('確定刪除這筆簡易記事？'))return;
-    await apiMutation([{kind:'deleteNote',data:{id}}]);showToast('記事已刪除');return;
-  }
-  if(action==='settings'){currentChildId=null;currentPage='settings';pushRouteHistory();renderSettings();return;}
-  if(action==='manage-categories'){categoryManager();return;}
-  if(action==='manage-note-types'){noteTypeManager();return;}
-  if(action==='new-category'){editCategoryForm({type:el.dataset.type,childId:'*'});return;}
-  if(action==='new-note-type'){editNoteTypeForm();return;}
-  if(action==='edit-note-type'){const t=getNoteTypes().find(x=>x.id===id);if(t)editNoteTypeForm(t);return;}
-  if(action==='edit-category'){const c=state.categories.find(x=>x.id===id);if(c)editCategoryForm(c);return;}
-  if(action==='toggle-category'){
-    const c=state.categories.find(x=>x.id===id);if(!c)return;
-    const next={...c,childId:'*',active:!(c.active===false||c.active==='false')};
-    await apiMutation([{kind:'saveCategory',data:next}]);categoryManager();showToast(next.active?'項目已啟用':'項目已停用');return;
-  }
-  if(action==='move-category'){
-    const c=state.categories.find(x=>x.id===id);if(!c)return;
-    const group=state.categories.filter(x=>String(x.childId||'')==='*'&&x.type===c.type&&x.active!==false&&x.active!=='false').sort((a,b)=>Number(a.sort)-Number(b.sort));
-    const idx=group.findIndex(x=>x.id===id),other=group[idx+Number(el.dataset.dir)];if(!other)return;
-    const a={...c,childId:'*',sort:Number(other.sort)},b={...other,childId:'*',sort:Number(c.sort)};
-    await apiMutation([{kind:'saveCategory',data:a},{kind:'saveCategory',data:b}]);categoryManager();return;
-  }
-  if(action==='toggle-note-type'){
-    const list=getNoteTypes(),idx=list.findIndex(x=>x.id===id);if(idx<0)return;
-    list[idx]={...list[idx],active:!(list[idx].active===false||list[idx].active==='false')};
-    await apiMutation([{kind:'saveSetting',data:{key:'noteTypes',value:list}}]);noteTypeManager();showToast(list[idx].active?'記事類型已啟用':'記事類型已停用');return;
-  }
-  if(action==='move-note-type'){
-    const list=getNoteTypes().sort((a,b)=>Number(a.sort)-Number(b.sort));const idx=list.findIndex(x=>x.id===id),other=list[idx+Number(el.dataset.dir)];if(!other)return;
-    const n=list[idx].sort;list[idx]={...list[idx],sort:other.sort};const j=list.findIndex(x=>x.id===other.id);list[j]={...list[j],sort:n};
-    await apiMutation([{kind:'saveSetting',data:{key:'noteTypes',value:list}}]);noteTypeManager();return;
-  }
-  if(action==='cloud-backup'){
-    const r=await api('backup');if(!r.ok)throw new Error(r.message||r.error||'雲端備份失敗');showToast(r.message||'雲端備份完成');return;
-  }
-  if(action==='cloud-restore'){
-    if(!confirm('雲端還原會以雲端備份覆蓋目前總控試算表中的資料。確定繼續？'))return;
-    const r=await api('restoreCloud');if(!r.ok)throw new Error(r.error||'雲端還原失敗');state=normalizeState(r.state||{});currentChildId=null;render();showToast(r.message||'雲端還原完成');return;
-  }
-  if(action==='local-backup'){await localBackup();return;}
-  if(action==='local-restore'){$('#localFileInput').click();return;}
-  if(action==='stay-app'){closeModal();try{history.pushState({__studioRootGuard:true}, '', location.href);}catch(_){}return;}
-  if(action==='exit-app'){closeModal();history.back();return;}
-  if(action==='install'){
-    if(deferredInstallPrompt){
-      const promptEvent=deferredInstallPrompt;
-      deferredInstallPrompt=null;
-      promptEvent.prompt();
-      const choice=await promptEvent.userChoice;
-      showToast(choice?.outcome==='accepted'?'已接受安裝':'已取消安裝');
-      updateInstallButton();
-    }else if(/iphone|ipad|ipod/i.test(navigator.userAgent)){
-      openModal('加入 iPhone／iPad 主畫面',`<div class="install-guide"><p>請使用 Safari 開啟本程式，再依照以下步驟加入主畫面：</p><ol><li>點擊 Safari 工具列的<strong>分享</strong>圖示。</li><li>往下找到<strong>加入主畫面</strong>。</li><li>確認名稱後，按右上角<strong>新增</strong>。</li></ol><p class="helper">加入後即可從主畫面像 APP 一樣開啟。iOS 的加入主畫面流程由 Safari 系統選單提供。</p></div><div class="modal-actions"><button class="primary" data-action="close-modal">知道了</button></div>`);
-    }else{
-      openModal('目前尚未提供安裝提示',`<div class="install-guide"><p>瀏覽器目前尚未提供真正的 PWA 安裝提示。</p><ol><li>請確認使用 HTTPS 網址開啟本程式。</li><li>保持網頁開啟並操作一會兒，再按「安裝 APP」。</li><li>當 Chrome 提供原生安裝視窗時，按下安裝即可。</li></ol><p class="helper">若尚未出現原生安裝提示，請先不要把一般「新增至主畫面」捷徑當成已完成 APP 安裝。</p></div><div class="modal-actions"><button class="primary" data-action="close-modal">知道了</button></div>`);
-    }
+async function installApp(){
+  if(isRunningStandalone()){
+    hideInstallButton();
+    toast('真好點已經安裝在這台裝置上了。');
     return;
   }
-}
-
-async function handleFormSubmit(form) {
-  const fd=new FormData(form);const data=Object.fromEntries(fd.entries());
-  if(form.dataset.form==='advance'){
-    const month=form.dataset.month||thisMonth();
-    const all={...(state.settings.monthlySettlements||{})};
-    const d=settlementData(month);
-    const advanceType=form.dataset.advanceType==='studio'?'studio':'coworker';
-    const key=advanceType==='studio'?'studioAdvances':'coworkerAdvances';
-    const id=form.dataset.id||uid('advance');
-    const old=(d[key]||[]).find(x=>x.id===id)||{};
-    const item={...old,id,date:data.date,item:String(data.item||'').trim(),amount:Number(data.amount||0),note:data.note||''};
-    if(!item.item)throw new Error('請填寫代墊明細。');
-    if(!item.date)throw new Error('請選擇代墊日期。');
-    if(item.amount<=0)throw new Error('代墊金額必須大於 0。');
-    d[key]=[...(d[key]||[]).filter(x=>x.id!==id),item];all[month]=d;
-    await apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]);
-    closeModal();analysisMonth=month;renderSettlement();showToast('代墊明細已儲存');return;
-  }
-  if(form.dataset.form==='settlementRules'){
-    const generalRatio=Number(data.generalRatio)/100,foodRatio=Number(data.foodRatio)/100;
-    if(!Number.isFinite(generalRatio)||!Number.isFinite(foodRatio)||generalRatio<0||generalRatio>1||foodRatio<0||foodRatio>1)throw new Error('分帳比例請輸入 0 到 100。');
-    await apiMutation([{kind:'saveSetting',data:{key:'settlementRules',value:{generalRatio,foodRatio}}}]);
-    closeModal();renderSettings();showToast('分帳規則已儲存');return;
-  }
-  if(form.dataset.form==='child'){
-    const id=form.dataset.id||uid('child');
-    const old=state.children.find(c=>c.id===id)||{};
-    const ops=[{kind:'saveChild',data:{...old,id,name:data.name.trim(),memo:data.memo||'',status:form.dataset.status||'active'}}];
-    await apiMutation(ops);
-    closeModal();showToast('孩童資料已儲存');return;
-  }
-  if(form.dataset.form==='transaction'){
-    const childId=form.dataset.childId;const id=form.dataset.id||uid('tx');
-    const category=state.categories.find(c=>c.id===data.categoryId);
-    if(!category)throw new Error('請先在設定中建立可用的收支項目。');
-    const old=state.transactions.find(t=>t.id===id)||{};
-    const isGift=category.id==='cat_gift'||category.name==='禮金';
-    const amount=Number(data.amount||0);
-    if(!isGift&&!String(data.amount||'').trim())throw new Error('請填寫金額。');
-    const tx={...old,id,childId,date:data.date,type:data.type,categoryId:category.id,category:category.name,amount,paymentMethod:data.paymentMethod||'',note:data.note||'',giftFestival:isGift?(data.giftFestival||''):'',giftCash:isGift?amount:0,giftItemName:isGift?(data.giftItemName||''):'',giftItemValue:isGift?Number(data.giftItemValue||0):0};
-    if(isGift&&amount===0&&!tx.giftItemName)throw new Error('禮金請至少填寫現金金額或禮品名稱。');
-    await apiMutation([{kind:'saveTransaction',data:tx}]);
-    closeModal();showToast('收支紀錄已儲存');return;
-  }
-  if(form.dataset.form==='note'){
-    const childId=form.dataset.childId;const id=form.dataset.id||uid('note');
-    const start=data.startTime||'',end=data.endTime||'',mins=durationMinutes(start,end);
-    const old=state.notes.find(n=>n.id===id)||{};
-    const note={...old,id,childId,date:data.date,startTime:start,endTime:end,durationMinutes:mins,type:data.type,note:data.note||''};
-    await apiMutation([{kind:'saveNote',data:note}]);closeModal();showToast('簡易記事已儲存');return;
-  }
-  if(form.dataset.form==='category'){
-    const id=form.dataset.id||uid('cat');const type=form.querySelector('[name="type"]').value;
-    const old=state.categories.find(c=>c.id===id)||{};
-    const group=state.categories.filter(c=>String(c.childId||'')==='*'&&c.type===type&&c.active!==false&&c.active!=='false');
-    const category={...old,id,childId:'*',type,name:data.name.trim(),sort:old.sort||((group.length+1)*10),active:true};
-    await apiMutation([{kind:'saveCategory',data:category}]);closeModal();categoryManager();showToast('共用項目已儲存');return;
-  }
-  if(form.dataset.form==='noteType'){
-    const id=form.dataset.id||uid('noteType');
-    const list=getNoteTypes();const index=list.findIndex(x=>x.id===id);
-    const old=index>=0?list[index]:{};
-    const item={...old,id,name:data.name.trim(),sort:old.sort||((list.length+1)*10),active:true};
-    if(index>=0)list[index]=item;else list.push(item);
-    await apiMutation([{kind:'saveSetting',data:{key:'noteTypes',value:list}}]);
-    closeModal();noteTypeManager();showToast('共用記事類型已儲存');return;
-  }
-}
-
-async function localBackup() {
-  const result=await api('bootstrap');if(!result.ok)throw new Error(result.error||'讀取資料失敗');
-  const snapshot={app:'工作室收入記帳',version:1,exportedAt:new Date().toISOString(),state:result.state};
-  const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`工作室收入記帳_本機備份_${today()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('本機備份檔已下載');
-}
-async function localRestore(file) {
-  const parsed=JSON.parse(await file.text());
-  if(!parsed||!parsed.state||parsed.app!=='工作室收入記帳')throw new Error('這不是「工作室收入記帳」的備份檔。');
-  const s=normalizeState(parsed.state);
-  const ops=[];
-  s.children.forEach(data=>ops.push({kind:'saveChild',data}));
-  s.categories.forEach(data=>ops.push({kind:'saveCategory',data}));
-  s.transactions.forEach(data=>ops.push({kind:'saveTransaction',data}));
-  s.notes.forEach(data=>ops.push({kind:'saveNote',data}));
-  Object.entries(s.settings).forEach(([key,value])=>ops.push({kind:'saveSetting',data:{key,value}}));
-  if(!ops.length){showToast('備份檔沒有可匯入的資料');return;}
-  if(!confirm(`準備合併匯入 ${ops.length} 筆資料。現有資料不會被清除，識別碼相同的項目會更新。確定繼續？`))return;
-  const batchSize=3;
-  for(let i=0;i<ops.length;i+=batchSize){updateBusyDetail(`正在寫入第 ${Math.floor(i/batchSize)+1} 批，共 ${Math.ceil(ops.length/batchSize)} 批。請保持網路連線。`);await apiMutation(ops.slice(i,i+batchSize));}
-  showToast(`本機資料匯入完成，共處理 ${ops.length} 筆`);
-}
-
-function showConnectionError(message) {
-  $('#appRoot').innerHTML=`<div class="lock-wrap"><img src="${window.__STUDIO_ICON_512__}" alt="工作室收入記帳"><h2>工作室收入記帳</h2><p>${esc(message||'目前無法連接雲端資料。請確認網路及 GAS 部署設定。')}</p><button class="primary" style="width:100%" id="retryConnect">重新連線</button></div>`;
-}
-
-// 全域事件委派：凡涉及雲端讀寫，立即顯示處理遮罩與按鈕忙碌狀態。
-const NETWORK_ACTIONS=new Set(['archive-child','restore-child','delete-transaction','delete-note','toggle-category','move-category','toggle-note-type','move-note-type','cloud-backup','cloud-restore','local-backup','save-settlement','add-advance','edit-advance','delete-advance']);
-const ACTION_BUSY_LABELS={
-  'archive-child':'正在更新孩童狀態…','restore-child':'正在恢復收托資料…',
-  'delete-transaction':'正在刪除收支紀錄…','delete-note':'正在刪除簡易記事…',
-  'toggle-category':'正在更新共用收支項目…','move-category':'正在調整共用項目順序…',
-  'toggle-note-type':'正在更新記事類型…','move-note-type':'正在調整記事類型順序…',
-  'cloud-backup':'正在建立雲端備份…','cloud-restore':'正在從雲端還原資料…','local-backup':'正在準備本機備份…',
-  'save-settlement':'正在儲存本月分帳結算…','add-advance':'正在準備新增代墊明細…','edit-advance':'正在準備編輯代墊明細…','delete-advance':'正在刪除代墊明細…'
-};
-$('#appRoot').addEventListener('click', async e=>{
-  const target=e.target.closest('[data-action]');if(!target)return;
-  if(target.dataset.action==='close-modal'&&e.target.closest('.modal'))return;
-  const action=target.dataset.action;
-  try{
-    if(!cloudReady && ['archive-child','restore-child','delete-transaction','delete-note','toggle-category','move-category','toggle-note-type','move-note-type','cloud-backup','cloud-restore','local-backup','local-restore','save-settlement','add-advance','edit-advance','delete-advance'].includes(action)){showToast('正在同步最新雲端資料，完成後即可執行這項操作。');return;}
-    if(NETWORK_ACTIONS.has(action))await withBusy(ACTION_BUSY_LABELS[action]||'正在處理雲端資料…',()=>handleAction(action,target),target);
-    else await handleAction(action,target);
-  }catch(err){showToast(err.message||String(err));}
-});
-$('#modalRoot').addEventListener('click', async e=>{
-  if(e.target.classList.contains('modal-backdrop')){closeModal();return;}
-  const target=e.target.closest('[data-action]');if(!target)return;
-  if(target.dataset.action==='close-modal'){closeModal();return;}
-  const action=target.dataset.action;
-  try{
-    if(!cloudReady && ['archive-child','restore-child','delete-transaction','delete-note','toggle-category','move-category','toggle-note-type','move-note-type','cloud-backup','cloud-restore','local-backup','local-restore','save-settlement','add-advance','edit-advance','delete-advance'].includes(action)){showToast('正在同步最新雲端資料，完成後即可執行這項操作。');return;}
-    if(NETWORK_ACTIONS.has(action))await withBusy(ACTION_BUSY_LABELS[action]||'正在處理雲端資料…',()=>handleAction(action,target),target);
-    else await handleAction(action,target);
-  }catch(err){showToast(err.message||String(err));}
-});
-document.addEventListener('submit',async e=>{
-  if(e.target.id==='modalForm'){
-    e.preventDefault();
-    if(!cloudReady){showToast('正在同步最新雲端資料，完成後即可新增或修改。');return;}
-    const form=e.target,btn=form.querySelector('[type="submit"]');
-    try{await withBusy('正在儲存資料至雲端…',()=>handleFormSubmit(form),btn,'正在更新 Google 試算表並同步最新資料，完成前請勿重複送出。');}
-    catch(err){showToast(err.message||String(err));}
-  }
-});
-
-document.addEventListener('change',async e=>{
-  if(e.target.id==='ledgerMonth'){selectedMonth=e.target.value;render();}
-  if(e.target.id==='monthPicker'){selectedMonth=e.target.value||thisMonth();render();}
-  if(e.target.id==='noteMonth'){selectedMonth=e.target.value;render();}
-  if(e.target.id==='analysisScope'){analysisChildId=e.target.value;renderAnalysis();}
-  if(e.target.id==='analysisStartMonth'){analysisStartMonth=e.target.value||buildAnalysisMonths(thisMonth(),6)[0];if(analysisStartMonth>analysisEndMonth)analysisEndMonth=analysisStartMonth;renderAnalysis();}
-  if(e.target.id==='analysisEndMonth'){analysisEndMonth=e.target.value||thisMonth();if(analysisEndMonth<analysisStartMonth)analysisStartMonth=analysisEndMonth;renderAnalysis();}
-  if(e.target.id==='settlementMonth'){
-    const previousMonth=analysisMonth||thisMonth(),nextMonth=e.target.value||thisMonth();
-    try{
-      const {d}=collectSettlementForm(previousMonth);
-      const all={...(state.settings.monthlySettlements||{}),[previousMonth]:d};
-      await withBusy('正在保存本月分帳設定…',()=>apiMutation([{kind:'saveSetting',data:{key:'monthlySettlements',value:all}}]));
-      analysisMonth=nextMonth;renderSettlement();
-    }catch(err){showToast(err.message||String(err));renderSettlement();}
-  }
-  if(e.target.id==='localFileInput'&&e.target.files?.[0]){const file=e.target.files[0];withBusy('正在匯入本機備份…',()=>localRestore(file),null,'資料會分批寫入雲端試算表，請保持網路連線。').catch(err=>showToast(err.message||String(err))).finally(()=>e.target.value='');}
-});
-function isStandaloneApp(){
-  return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
-}
-function updateInstallButton(){
-  document.querySelectorAll('[data-action="install"]').forEach(btn=>{
-    btn.classList.toggle('hidden',isStandaloneApp());
-    btn.setAttribute('aria-label',deferredInstallPrompt?'安裝工作室收入記帳':'安裝工作室收入記帳或查看安裝方式');
-    const label=btn.querySelector('span:last-child');
-    if(label) label.textContent=deferredInstallPrompt?'立即安裝 APP':'安裝 APP';
-  });
-}
-function installApp(){
-  if(isStandaloneApp()){updateInstallButton();showToast('工作室收入記帳已安裝在這台裝置上。');return;}
   if(deferredInstallPrompt){
     const promptEvent=deferredInstallPrompt;
     deferredInstallPrompt=null;
-    promptEvent.prompt();
-    Promise.resolve(promptEvent.userChoice).then(choice=>{
-      if(choice&&choice.outcome==='accepted')showToast('已接受安裝，請依手機畫面完成安裝。');
-      updateInstallButton();
-    }).catch(()=>updateInstallButton());
+    try{
+      await promptEvent.prompt();
+      const choice=await promptEvent.userChoice;
+      if(choice&&choice.outcome==='accepted'){
+        toast('已接受安裝，請完成系統安裝步驟。');
+      }else{
+        const btn=$('installBtn');
+        if(btn)btn.textContent='📲 安裝為 APP';
+      }
+    }catch(err){
+      console.warn('PWA 安裝視窗未能開啟：',err);
+      toast('目前無法開啟安裝視窗，請稍後再試。');
+    }
     return;
   }
-  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  const guide=isIOS
-    ? '<p>請使用 Safari 開啟本程式，再依照以下步驟加入主畫面：</p><ol><li>點擊 Safari 工具列的「分享」圖示。</li><li>往下找到「加入主畫面」。</li><li>確認名稱後按「新增」。</li></ol>'
-    : '<p>目前瀏覽器尚未提供自訂安裝視窗，仍可從瀏覽器選單安裝：</p><ol><li>使用 Android Chrome 正常瀏覽模式開啟 HTTPS 網址。</li><li>點右上角「⋮」。</li><li>選擇「安裝應用程式」或「新增至主畫面」。</li><li>依照畫面確認安裝。</li></ol><p>請勿使用 LINE、Facebook 等 App 內建瀏覽器。</p>';
-  openModal(isIOS?'加入 iPhone／iPad 主畫面':'將工作室收入記帳安裝到手機',`<div class="install-guide">${guide}<p class="helper">瀏覽器是否提供原生安裝提示，由瀏覽器依安裝條件判定；未出現提示時，請依上方方式操作。</p></div><div class="modal-actions"><button class="primary" data-action="close-modal">知道了</button></div>`);
+  showModal(`<h3>真好點安裝為 APP</h3><p>Chrome 目前尚未提供真正的應用程式安裝提示。</p><div class="notice">請確認使用 Android Chrome，並保持網頁開啟一段時間、至少點擊操作一次。若右上角選單出現「安裝應用程式」，可使用該選項。<br><br><strong>請不要選擇「新增至主畫面」來代替安裝</strong>，那可能只會建立帶有 Chrome 標誌的網頁捷徑。</div><p class="tiny muted">當瀏覽器確認符合 PWA 安裝條件後，這個按鈕會直接開啟系統安裝視窗。</p><button class="btn btn-primary btn-block" onclick="closeModal()">知道了</button>`);
 }
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();
-  deferredInstallPrompt=e;
-  updateInstallButton();
-});
-window.addEventListener('appinstalled',()=>{
-  deferredInstallPrompt=null;
-  updateInstallButton();
-  showToast('工作室收入記帳已成功安裝！');
-});
-window.addEventListener('online',()=>{showToast('網路已恢復，正在同步雲端資料…');if(!cloudReady)loadState(false).catch(err=>{cloudReady=false;setSyncStatus('⚠️ 雲端暫時無法連線，目前顯示本機上次同步資料','offline');showToast('雲端同步仍未成功，請稍後重新整理。');});});
-window.addEventListener('offline',()=>showToast('目前離線，雲端資料功能暫時無法使用'));
-const standaloneQuery=window.matchMedia?window.matchMedia('(display-mode: standalone)'):null;
-if(standaloneQuery){
-  if(standaloneQuery.addEventListener)standaloneQuery.addEventListener('change',updateInstallButton);
-  else if(standaloneQuery.addListener)standaloneQuery.addListener(updateInstallButton);
+function initPwaInstall(){
+  const btn=$('installBtn');
+  if(!btn)return;
+  btn.textContent='📲 安裝為 APP';
+  btn.addEventListener('click',installApp);
+
+  // CSS 會先隱藏已安裝 App 的按鈕；此處再補 Safari/iOS 的 standalone 判斷。
+  if(isRunningStandalone()){
+    hideInstallButton();
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt',event=>{
+    event.preventDefault();
+    deferredInstallPrompt=event;
+    btn.textContent='📲 立即安裝 APP';
+    showInstallButton();
+  });
+
+  window.addEventListener('appinstalled',()=>{
+    deferredInstallPrompt=null;
+    hideInstallButton();
+    toast('真好點已成功安裝！');
+  });
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&isRunningStandalone())hideInstallButton();
+  });
 }
+function renderBridgeSetup(){
+  $('main').innerHTML=`<section class="hero"><h2>歡迎使用真好點問卷系統</h2><p>同一個網址管理多份問卷，問卷結果集中保存於 Google 試算表。</p></section><section class="card"><h3>尚未設定 GAS 連線網址</h3><div class="notice">請先完成 GAS 部署，再將產生的網頁應用程式 /exec 網址填入 index.html 最上方的 GAS_EXEC_URL，提交 GitHub 後重新整理本頁。</div><p class="small muted">這個 GitHub Pages 網址是管理者與使用者共用的正式入口；GAS /exec 只在背景作為資料服務。</p></section>`;
+}
+function renderError(message){$('main').innerHTML=`<section class="hero"><h2>雲端連線暫時中斷</h2><p>請確認網路及 GAS 部署設定。</p></section><div class="card"><div class="notice error">${esc(message)}</div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="loadPublic()">重新連線</button></div>`}
 
-document.addEventListener('click', async e=>{
-  if(e.target && e.target.id==='retryConnect'){
-    const btn=e.target;
-    try{await withBusy('正在重新連接雲端…',()=>loadState(false),btn,'正在讀取總控試算表，請稍候。');}
-    catch(err){showConnectionError(err.message||'雲端連線失敗，請檢查 GAS 部署設定。');}
-  }
-});
-
-// 開啟程式先顯示本機上次同步快取，再於背景更新雲端；不再讓使用者空等雲端載入。
-(async function start(){
-  initializeAppHistory();
-  const cached=readLocalCache();
-  if(cached){
-    state=normalizeState(cached.state);
-    localCacheAvailable=true;
-    const savedAt=cached.savedAt?new Date(cached.savedAt):null;
-    const savedLabel=savedAt&&!Number.isNaN(savedAt.getTime())?savedAt.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'上次保存';
-    cloudReady=false;
-    syncStatusText=`📱 顯示本機資料（${savedLabel}），正在背景同步雲端…`;syncStatusKind='loading';
-    render();
-  } else {
-    setSyncStatus('首次使用，正在載入雲端資料…','loading');
-  }
+function retryCloudConnection(){
+  if(state.bridgeReady&&state.bridgePort){loadPublic();return;}
+  // 安全通道尚未建立時，重新載入頁面會重新建立 nonce 與 MessageChannel。
+  window.location.reload();
+}
+function showCloudUnavailable(message){
+  state.cloudUnavailable=true;
+  state.cloudMessage=String(message||'雲端資料暫時無法讀取。');
+  setStatus(state.publicData?'暫時無法同步，先顯示上次資料':'雲端連線暫時中斷',false);
+  // 有快取時絕不以錯誤頁蓋掉已顯示的首頁；沒有快取時也保留正常首頁框架。
+  if(!state.publicData&&!state.admin)renderHome();
+}
+function renderStartupScreen(){
+  // 啟動時先同步讀取本機快取，讓畫面不必等待 GAS iframe 與雲端試算表。
+  renderHome();
+  setStatus(state.publicData?'已載入本機問卷清單，正在背景確認雲端…':'正在背景連接雲端並讀取問卷…');
+}
+async function loadPublic(){
+  // 首頁的雲端確認不鎖定畫面，也不降低頁面互動性。
+  state.cloudUnavailable=false;state.cloudMessage='';
+  setStatus(state.publicData?'正在背景同步雲端資料…':'正在背景讀取雲端問卷…');
   try{
-    await loadState(false);
+    const data=await api('getPublicData');
+    if(!data||!Array.isArray(data.surveys))throw new Error('雲端回傳的問卷清單格式不正確。');
+    state.publicData=data;state.surveys=data.surveys;state.hasLoadedPublic=true;
+    state.cloudUnavailable=false;state.cloudMessage='';
+    writeCachedPublicData(data);
+    setStatus('雲端資料已同步');
+    if(!state.admin&&!$('questionForm'))renderHome();
   }catch(err){
-    cloudReady=false;
-    if(cached){
-      setSyncStatus('⚠️ 雲端暫時無法連線，目前顯示本機上次同步資料','offline');
-      showToast('雲端同步失敗，已保留本機快取資料；請確認網路後重新整理。');
-    }else{
-      showConnectionError(err.message||'雲端連線失敗，請檢查 GAS 部署設定。');
-    }
+    showCloudUnavailable(err.message);
   }
-})();
+}
+function renderHome(){
+  const open=state.surveys.filter(s=>s.status==='開放中');
+  const hasAnySurvey=state.surveys.length>0;
+  const emptyMessage=!state.hasLoadedPublic
+    ? '正在背景確認雲端問卷資料，確認完成後會自動更新。'
+    : hasAnySurvey
+      ? '目前沒有問卷進行中，請稍後再來。所有已結束問卷仍可在下方查詢自己的回覆。'
+      : '目前沒有問卷進行中，管理者建立並開放問卷後，這裡就會自動顯示。';
+  const cloudNotice=state.cloudUnavailable
+    ? `<div class="notice error" style="margin-bottom:12px">${esc(state.cloudMessage||'雲端資料暫時無法讀取。')}${state.publicData?'<br>目前先顯示這台裝置上次保存的問卷清單。':''}<button class="btn btn-secondary btn-block" style="margin-top:9px" onclick="retryCloudConnection()">重新連線並同步</button></div>`
+    : (!state.publicData&&!state.hasLoadedPublic?'<div class="notice" style="margin-bottom:12px">首次載入正在背景確認雲端資料，首頁已先開啟，不需要停留在載入畫面。</div>':'');
+  $('main').innerHTML=`${cloudNotice}<section class="hero"><h2>每一份回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
+    <section class="card"><div class="section-title"><span class="emoji">📝</span><h3>目前開放中的問卷</h3><span class="badge">${open.length} 份</span></div>
+      ${open.length?`<div class="survey-grid">${open.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.description||'歡迎填寫本問卷')}</div></div><span class="badge">開放中</span></div><div class="survey-meta">建立時間：${esc(dateText(s.createdAt))}</div><div class="btn-row"><button class="btn btn-primary" onclick="openSurvey('${esc(s.id)}')">開始填寫</button><button class="btn btn-plain" onclick="openLookup('${esc(s.id)}')">查詢回覆</button></div></div>`).join('')}</div>`:`<div class="notice"><strong>目前沒有問卷進行中……</strong><br>${esc(emptyMessage)}</div>`}
+    </section>
+    <section class="card"><div class="section-title"><span class="emoji">🔎</span><h3>查詢以前的回覆</h3></div><p class="small muted">問卷結束後仍可查詢自己的回覆。必須輸入填寫時相同的姓名及電話，系統不會顯示其他人的資料。</p>
+      ${hasAnySurvey?`<div class="field"><label>選擇問卷</label><select id="lookupSurveySelect" class="select">${state.surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title)}（${esc(s.status)}）</option>`).join('')}</select></div><button class="btn btn-secondary btn-block" onclick="openLookup($('lookupSurveySelect').value)">查詢我的回覆</button>`:state.hasLoadedPublic?'<div class="notice">目前尚未建立任何問卷，暫時沒有可查詢的回覆。</div>':state.cloudUnavailable?'<div class="notice">目前無法取得問卷清單，請重新連線後再查詢。</div>':'<div class="notice">正在背景確認可查詢的問卷清單…</div>'}
+    </section>`;
+}
+async function openSurvey(id,existing){
+  try{setBusy(true);const result=await api('getPublicSurvey',id);state.activeSurvey=result.survey;state.editingResponse=existing||null;renderSurveyForm(existing?existing.answers:null);}
+  catch(err){toast(err.message)}finally{setBusy(false)}
+}
+function renderQuestion(q,answers){
+  const required=q.required?'<span class="required">必填</span>':'<span class="optional">選填</span>';
+  const answer=answers?answers[q.id]:null;
+  let body='';
+  if(q.type==='text')body=`<input class="input" data-answer="text" maxlength="3000" value="${esc(answer||'')}" placeholder="請輸入${esc(q.label)}">`;
+  else if(q.type==='textarea')body=`<textarea class="textarea" data-answer="textarea" maxlength="3000" placeholder="請輸入${esc(q.label)}">${esc(answer||'')}</textarea>`;
+  else if(q.type==='date')body=`<input class="input" type="date" data-answer="date" value="${esc(answer||'')}">`;
+  else if(q.type==='number')body=`<input class="input" type="number" step="any" data-answer="number" value="${answer==null?'':esc(answer)}" placeholder="請輸入數字">`;
+  else if(q.type==='rating')body=`<div class="option-list">${[1,2,3,4,5].map(n=>`<label class="option"><input type="radio" name="rating_${esc(q.id)}" value="${n}" ${Number(answer)===n?'checked':''}><span class="option-name">${'★'.repeat(n)}${'☆'.repeat(5-n)}</span><b>${n} 分</b></label>`).join('')}</div>`;
+  else if(q.type==='single'||q.type==='multi')body=`<div class="option-list">${(q.options||[]).map(o=>{const checked=q.type==='single'?answer===o.id:Array.isArray(answer)&&answer.includes(o.id);return `<label class="option"><input type="${q.type==='single'?'radio':'checkbox'}" name="${q.type}_${esc(q.id)}" value="${esc(o.id)}" ${checked?'checked':''}><span class="option-name">${esc(o.label)}</span>${Number(o.price||0)?`<span class="price">${money(o.price)}</span>`:''}</label>`}).join('')}</div>`;
+  else if(q.type==='dropdown')body=`<select class="select" data-answer="dropdown"><option value="">請選擇</option>${(q.options||[]).map(o=>`<option value="${esc(o.id)}" ${answer===o.id?'selected':''}>${esc(o.label)}${Number(o.price||0)?'（'+money(o.price)+'）':''}</option>`).join('')}</select>`;
+  else if(q.type==='items' && (q.itemMode==='product'||q.basePrice!==undefined)){
+    const a=answer&&typeof answer==='object'&&!Array.isArray(answer)?answer:{};
+    const productQty=Math.max(0,Number(a.productQty||0));
+    const custom=a.customizations||[];
+    body=`<div class="product-qty-panel" data-item-mode="product">
+      <div class="product-price-line"><span>商品單價</span><strong>${money(q.basePrice||0)}／份</strong></div>
+      <div class="qty-row" style="justify-content:space-between;align-items:center"><div><b>訂購數量</b><div class="tiny muted">最多 ${Number(q.maxQty||20)} 份</div></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||20)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||20)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||20)})">＋</button></div></div>
+      ${(q.options||[]).length?`<div class="customization-list"><h4>客製化／加購選項</h4>${(q.options||[]).map(o=>{const item=custom.find(x=>x.optionId===o.id);const qty=item?Number(item.qty||0):0;const max=Number(o.maxQty||5);return `<div class="customization-row"><div class="customization-info"><strong>${esc(o.label)}</strong><span class="tiny muted">${money(o.price||0)}／份・最多 ${max} 份</span></div><div class="qty-control compact"><button type="button" aria-label="減少${esc(o.label)}數量" onclick="adjustQty(this,-1,${max})" ${productQty<=0||qty<=0?'disabled':''}>－</button><input class="qty-value" data-qty-role="custom" data-option-id="${esc(o.id)}" type="number" inputmode="numeric" min="0" max="${max}" value="${qty}" oninput="handleQtyInput(this)" ${productQty<=0?'disabled':''}><button type="button" aria-label="增加${esc(o.label)}數量" onclick="adjustQty(this,1,${max})" ${productQty<=0||qty>=max?'disabled':''}>＋</button></div></div>`}).join('')}</div>`:'<p class="tiny muted">此商品沒有額外客製化選項。</p>'}
+      ${q.allowNote!==false?`<textarea class="textarea item-product-note" data-item-note maxlength="300" placeholder="商品備註（選填，例如不要香菜）">${esc(a.note||'')}</textarea>`:''}
+    </div>`;
+  }
+  else if(q.type==='items')body=`<div class="option-list">${(q.options||[]).map(o=>{const chosen=Array.isArray(answer)?answer.find(x=>x.optionId===o.id):null;return `<div class="option item-option"><input type="checkbox" class="item-check" value="${esc(o.id)}" ${chosen?'checked':''}><div style="flex:1;min-width:0"><div class="option-name">${esc(o.label)} ${Number(o.price||0)?`<span class="price">${money(o.price)}</span>`:''}</div><div class="qty-row"><span class="tiny muted">數量</span><input class="qty item-qty" type="number" min="1" max="${Number(q.maxQty||20)}" value="${chosen?Number(chosen.qty||1):1}"><input class="input note-input item-note" style="flex:1;min-width:110px;min-height:36px;padding:7px 9px" maxlength="300" placeholder="備註（選填）" value="${esc(chosen?chosen.note||'':'')}"></div></div></div>`}).join('')}</div>`;
+  return `<div class="field question-box" data-qid="${esc(q.id)}" data-type="${esc(q.type)}" data-item-mode="${esc(q.itemMode||(q.basePrice!==undefined?'product':'legacy'))}"><label>${esc(q.label)}${required}</label>${body}</div>`;
+}
+
+
+function renderSurveyForm(initialAnswers){
+  const s=state.activeSurvey;if(!s)return;
+  const editing=!!state.editingResponse;
+  const profile=state.identity||{};
+  $('main').innerHTML=`<button class="back" onclick="renderHome()">← 返回問卷列表</button><section class="hero"><h2>${esc(s.title)}</h2><p>${esc(s.description||'請依照題目填寫資料。')}</p></section>
+    ${s.status!=='開放中'?'<div class="notice">這份問卷已結束，只能查詢自己的回覆。</div>':''}
+    <section class="card"><h3>填寫者資料</h3><div class="form-grid"><div class="field"><label>姓名<span class="required">必填</span></label><input id="profileName" class="input" maxlength="60" value="${esc(profile.name||'')}" placeholder="請輸入姓名"></div><div class="field"><label>手機／聯絡電話<span class="required">必填</span></label><input id="profilePhone" class="input" inputmode="tel" maxlength="20" value="${esc(profile.phone||'')}" placeholder="請輸入電話"></div></div><p class="tiny muted">姓名與電話用於查詢及核對自己的回覆；試算表只顯示電話末四碼。</p></section>
+    <section class="card"><h3>問卷內容</h3><div id="questionForm">${s.questions.map(q=>renderQuestion(q,initialAnswers)).join('')}</div><div class="total-box"><span>本次金額（如有價格題目）</span><strong id="liveTotal">$0</strong></div>
+      ${s.status==='開放中'?`<button class="btn btn-primary btn-block" onclick="submitCurrentSurvey()">${editing?'儲存修改':'確認並送出'}</button>`:''}
+      <button class="btn btn-secondary btn-block" style="margin-top:8px" onclick="openLookup('${esc(s.id)}')">查詢我的回覆</button>
+    </section>`;
+  // 姓名與電話在輸入時即保存到本機瀏覽器，下次開啟問卷或查詢時自動帶入。
+  const saveProfileFields=()=>rememberIdentity({name:$('profileName')?.value||'',phone:$('profilePhone')?.value||''});
+  $('profileName').addEventListener('input',saveProfileFields);
+  $('profilePhone').addEventListener('input',saveProfileFields);
+  document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);
+  updateLiveTotal();
+  $('questionForm').addEventListener('change',()=>{document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);updateLiveTotal();});
+  $('questionForm').addEventListener('input',updateLiveTotal);
+}
+
+
+function collectAnswersFrom(rootSelector){
+  const out={};
+  document.querySelectorAll(`${rootSelector} .question-box`).forEach(box=>{
+    const id=box.dataset.qid,type=box.dataset.type;
+    if(type==='text'||type==='textarea'||type==='date'||type==='number'){const el=box.querySelector('[data-answer]');out[id]=el?el.value:'';}
+    else if(type==='rating'){const x=box.querySelector('input:checked');out[id]=x?Number(x.value):'';}
+    else if(type==='single'){const x=box.querySelector('input:checked');out[id]=x?x.value:'';}
+    else if(type==='multi'){out[id]=Array.from(box.querySelectorAll('input:checked')).map(x=>x.value);}
+    else if(type==='dropdown'){const x=box.querySelector('[data-answer]');out[id]=x?x.value:'';}
+    else if(type==='items'&&box.dataset.itemMode==='product'){
+      const productQty=Math.max(0,Number(box.querySelector('[data-qty-role="product"]')?.value||0));
+      const customizations=Array.from(box.querySelectorAll('[data-qty-role="custom"]')).map(el=>({optionId:el.dataset.optionId,qty:Math.max(0,Number(el.value||0))})).filter(x=>x.qty>0);
+      const note=box.querySelector('[data-item-note]')?.value.trim()||'';
+      out[id]={productQty:productQty,customizations:customizations,note:note};
+    }
+    else if(type==='items'){
+      out[id]=Array.from(box.querySelectorAll('.item-option')).filter(el=>el.querySelector('.item-check').checked).map(el=>({optionId:el.querySelector('.item-check').value,qty:Number(el.querySelector('.item-qty').value)||1,note:el.querySelector('.item-note').value.trim()}));
+    }
+  });
+  return out;
+}
+function collectAnswers(){return collectAnswersFrom('#questionForm')}
+function adjustQty(button,delta,max){
+  const control=button.closest('.qty-control');if(!control)return;
+  const input=control.querySelector('.qty-value');if(!input||input.disabled)return;
+  const next=Math.max(0,Math.min(Number(max||99),Math.floor(Number(input.value||0))+delta));
+  input.value=String(next);
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function handleQtyInput(input){
+  const max=Number(input.max||99);let value=Number(input.value);
+  if(!Number.isFinite(value)||value<0)value=0;
+  value=Math.min(max,Math.floor(value));input.value=String(value);
+  const box=input.closest('.question-box');
+  if(box&&input.dataset.qtyRole==='product')syncProductOptionAvailability(box);
+  updateLiveTotal();
+}
+function syncProductOptionAvailability(box){
+  if(!box)return;
+  const productQty=Number(box.querySelector('[data-qty-role="product"]')?.value||0);
+  box.querySelectorAll('[data-qty-role="custom"]').forEach(input=>{
+    const control=input.closest('.qty-control');
+    const buttons=control?control.querySelectorAll('button'):[];
+    if(productQty<=0){input.value='0';input.disabled=true;buttons.forEach(b=>b.disabled=true);}
+    else{input.disabled=false;buttons.forEach(b=>b.disabled=false);const max=Number(input.max||5);input.value=String(Math.min(max,Math.max(0,Number(input.value||0))));if(buttons[0])buttons[0].disabled=Number(input.value)<=0;if(buttons[1])buttons[1].disabled=Number(input.value)>=max;}
+  });
+}
+function currentAmount(){
+  if(!state.activeSurvey)return 0;
+  const answers=collectAnswers();let sum=0;
+  state.activeSurvey.questions.forEach(q=>{
+    const a=answers[q.id];
+    if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);if(o)sum+=Number(o.price||0);}
+    else if(q.type==='multi'&&Array.isArray(a)){a.forEach(id=>{const o=(q.options||[]).find(x=>x.id===id);if(o)sum+=Number(o.price||0);});}
+    else if(q.type==='items'&&q.itemMode==='product'&&a&&!Array.isArray(a)){
+      sum+=Number(q.basePrice||0)*Number(a.productQty||0);
+      (a.customizations||[]).forEach(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);if(o)sum+=Number(o.price||0)*Number(x.qty||0);});
+    }
+    else if(q.type==='items'&&Array.isArray(a)){a.forEach(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);if(o)sum+=Number(o.price||0)*Number(x.qty||1);});}
+  });
+  return sum;
+}
+function updateLiveTotal(){const el=$('liveTotal');if(el)el.textContent=money(currentAmount())}
+
+
+async function submitCurrentSurvey(){
+  const profile={name:$('profileName').value.trim(),phone:$('profilePhone').value.trim()};
+  rememberIdentity(profile);
+  if(!profile.name||!profile.phone){toast('請填寫姓名及電話');return;}
+  const answers=collectAnswers();
+  const total=currentAmount();
+  const isEdit=!!state.editingResponse;
+  if(!confirm(`${isEdit?'確認儲存修改':'確認送出問卷'}？\n姓名：${profile.name}\n金額：${money(total)}`))return;
+  setBusy(true);
+  try{
+    let result;
+    if(isEdit)result=await api('editMyResponse',state.activeSurvey.id,profile,state.editingResponse.responseId,answers);
+    else result=await api('submitResponse',state.activeSurvey.id,profile,answers);
+    if(result.duplicate){rememberIdentity(profile);toast(result.message);openLookup(state.activeSurvey.id);return;}
+    if(!result.ok)throw new Error(result.message||'送出失敗');
+    rememberIdentity(profile);state.editingResponse=null;
+    const filled=renderFilledAnswersHtml(state.activeSurvey,answers);
+    showModal(`<div style="text-align:center"><div style="font-size:50px">🎉</div><h3>${isEdit?'修改完成':'送出成功！'}</h3><p class="muted small">${esc(result.message||'資料已安全寫入雲端。')}</p><div class="notice success">回覆編號：<b>${esc(result.responseId||'已更新')}</b><br>金額：<b>${money(result.amount==null?total:result.amount)}</b></div><div class="order-card" style="text-align:left;margin-top:12px"><b>本次填寫明細</b>${filled}</div><button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();loadPublic()">完成</button></div>`);
+  }catch(err){toast(err.message)}finally{setBusy(false)}
+}
+
+
+function openLookup(surveyId){
+  if(!surveyId){toast('請先選擇問卷');return}
+  state.lookupSurveyId=surveyId;
+  const remembered=state.identity||{};
+  showModal(`<h3>查詢我的回覆</h3><p class="small muted">請輸入填寫時使用的姓名及電話，兩者必須一致。</p><div class="field"><label>姓名</label><input id="lookupName" class="input" maxlength="60" value="${esc(remembered.name||'')}" placeholder="請輸入姓名"></div><div class="field"><label>手機／聯絡電話</label><input id="lookupPhone" class="input" inputmode="tel" maxlength="20" value="${esc(remembered.phone||'')}" placeholder="請輸入電話"></div><div id="lookupResult"></div><div class="btn-row"><button class="btn btn-primary" onclick="doLookup()">查詢</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);
+  const saveLookupFields=()=>rememberIdentity({name:$('lookupName')?.value||'',phone:$('lookupPhone')?.value||''});
+  $('lookupName').addEventListener('input',saveLookupFields);
+  $('lookupPhone').addEventListener('input',saveLookupFields);
+}
+async function doLookup(){
+  const profile={name:$('lookupName').value.trim(),phone:$('lookupPhone').value.trim()};
+  rememberIdentity(profile);
+  if(!profile.name||!profile.phone){toast('請輸入姓名及電話');return;}
+  setBusy(true);
+  try{
+    const r=await api('lookupMyResponse',state.lookupSurveyId,profile);
+    if(!r.found){$('lookupResult').innerHTML=`<div class="notice error">${esc(r.message||'查無資料')}</div>`;return;}
+    rememberIdentity(profile);
+    const surveyData=await api('getPublicSurvey',state.lookupSurveyId);state.activeSurvey=surveyData.survey;
+    state.editingResponse=r.response;
+    const s=state.activeSurvey,resp=r.response;
+    $('lookupResult').innerHTML=`<div class="notice success">已找到你的回覆。<br>回覆編號：<b>${esc(resp.responseId)}</b><br>填寫時間：${esc(dateText(resp.submittedAt))}<br>金額：<b>${money(resp.amount)}</b></div><div class="order-card">${renderFilledAnswersHtml(s,resp.answers)}</div>${r.canEdit?'<button class="btn btn-primary btn-block" onclick="closeModal();openSurveyForEdit()">修改我的回覆</button>':'<div class="notice">這份問卷已結束或已停止修改，目前只能查看。</div>'}`;
+  }catch(err){$('lookupResult').innerHTML=`<div class="notice error">${esc(err.message)}</div>`}finally{setBusy(false)}
+}
+
+
+function openSurveyForEdit(){const saved=state.editingResponse;renderSurveyForm(saved?saved.answers:null)}
+function formatAnswerForUi(q,a){
+  if(a===undefined||a===null||a==='')return '';
+  if(q.type==='text'||q.type==='textarea'||q.type==='date')return String(a).trim();
+  if(q.type==='number')return String(a);
+  if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);return o?o.label+(Number(o.price||0)?'（'+money(o.price)+'）':''):'';}
+  if(q.type==='multi')return (Array.isArray(a)?a:[]).map(id=>(q.options||[]).find(x=>x.id===id)).filter(Boolean).map(o=>o.label+(Number(o.price||0)?'（'+money(o.price)+'）':'')).join('、');
+  if(q.type==='items'&&(q.itemMode==='product'||q.basePrice!==undefined||(a&&typeof a==='object'&&!Array.isArray(a)))){
+    const obj=a&&typeof a==='object'?a:{};const qty=Number(obj.productQty||0);const parts=[];
+    if(qty>0){const price=Number(q.basePrice||0);parts.push(`商品數量：${qty} 份 × ${money(price)} = ${money(qty*price)}`);}
+    (Array.isArray(obj.customizations)?obj.customizations:[]).forEach(item=>{const o=(q.options||[]).find(x=>x.id===item.optionId);const n=Number(item.qty||0);if(o&&n>0){const subtotal=Number(o.price||0)*n;parts.push(`${o.label}：${n} 份（${money(o.price||0)}／份，小計 ${money(subtotal)}）`);}});
+    if(obj.note)parts.push('備註：'+String(obj.note).trim());
+    return parts.join('；');
+  }
+  if(q.type==='items')return (Array.isArray(a)?a:[]).map(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);return (o?o.label:x.optionId)+' × '+x.qty+(o&&Number(o.price||0)?'（'+money(o.price)+'/份）':'')+(x.note?'（'+x.note+'）':'');}).join('；');
+  if(q.type==='rating')return a===''?'':String(a)+' 分';
+  return String(a).trim();
+}
+function renderFilledAnswersHtml(survey,answers){
+  const rows=(survey.questions||[]).map(q=>({q:q,text:formatAnswerForUi(q,answers?answers[q.id]:undefined)})).filter(x=>x.text!==''&&x.text!=null);
+  if(!rows.length)return '<p class="tiny muted">沒有其他填寫內容。</p>';
+  return rows.map(x=>`<div class="answer-line"><b>${esc(x.q.label)}</b><br>${esc(x.text)}</div>`).join('');
+}
+
+
+function adminLoginDialog(){showModal(`<h3>管理者登入</h3><p class="small muted">請輸入管理者密碼以進入問卷管理。</p><div class="field"><label>管理者密碼</label><input id="adminPassword" class="input" type="password" autocomplete="current-password" placeholder="請輸入密碼"></div><div id="loginError"></div><div class="btn-row"><button class="btn btn-primary" onclick="doAdminLogin()">登入</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);$('adminPassword').addEventListener('keydown',e=>{if(e.key==='Enter')doAdminLogin()})}
+async function doAdminLogin(){setBusy(true);try{const r=await api('loginAdmin',$('adminPassword').value);if(!r.ok){$('loginError').innerHTML=`<div class="notice error">${esc(r.message)}</div>`;return}state.token=r.token;state.admin=true;closeModal();await loadAdmin()}catch(err){$('loginError').innerHTML=`<div class="notice error">${esc(err.message)}</div>`}finally{setBusy(false)}}
+async function loadAdmin(){try{state.adminOverview=await api('getAdminOverview',state.token);state.adminTab='surveys';renderAdmin()}catch(err){toast(err.message);if(/逾期|重新登入/.test(err.message)){state.admin=false;state.token='';renderHome()}}}
+function renderAdmin(){
+  setStatus('管理者模式');
+  const tabs=[['surveys','問卷管理'],['builder','設計問卷'],['backup','雲端備份'],['security','密碼設定']];
+  $('main').innerHTML=`<section class="hero"><h2>問卷管理中心</h2><p>管理多份同時進行的問卷，查看回覆及保護雲端資料。</p></section><div class="admin-tabs">${tabs.map(t=>`<button class="tab ${state.adminTab===t[0]?'active':''}" onclick="setAdminTab('${t[0]}')">${t[1]}</button>`).join('')}<button class="tab" onclick="exitAdmin()">退出管理</button></div><div id="adminContent"></div>`;
+  if(state.adminTab==='surveys')renderAdminSurveys();else if(state.adminTab==='builder')renderBuilder();else if(state.adminTab==='backup')renderBackup();else renderSecurity();
+}
+function setAdminTab(tab){state.adminTab=tab;renderAdmin()}
+function exitAdmin(){state.admin=false;state.token='';state.adminSurvey=null;setStatus('雲端已連線');loadPublic()}
+function renderAdminSurveys(){
+  const list=(state.adminOverview&&state.adminOverview.surveys)||[];
+  const open=list.filter(s=>s.status==='開放中').length;
+  const count=list.reduce((n,s)=>n+s.responseCount,0);
+  $('adminContent').innerHTML=`<div class="card"><div class="stat-grid"><div class="stat"><b>${list.length}</b><span>問卷總數</span></div><div class="stat"><b>${open}</b><span>開放中</span></div><div class="stat"><b>${count}</b><span>回覆總數</span></div></div><div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="newSurvey()">＋ 建立新問卷</button><a class="btn btn-plain" href="${esc((state.adminOverview.settings||{}).resultSpreadsheetUrl||'#')}" target="_blank" style="text-align:center;text-decoration:none">開啟結果試算表</a></div></div>
+  <div class="card"><h3>所有問卷</h3>${list.length?list.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.sheetName)} ・ ${s.responseCount} 份回覆 ・ 金額 ${money(s.totalAmount)}</div></div><span class="badge ${s.status==='開放中'?'':s.status==='已結束'?'closed':'draft'}">${esc(s.status)}</span></div><div class="survey-meta">建立：${esc(dateText(s.createdAt))}${s.closedAt?' ・ 結束：'+esc(dateText(s.closedAt)):''}</div><div class="btn-row"><button class="btn btn-secondary" onclick="editSurvey('${esc(s.id)}')">編輯問卷</button><button class="btn btn-blue" onclick="viewResponses('${esc(s.id)}')">查看回覆</button></div><div class="btn-row" style="margin-top:7px"><button class="btn ${s.status==='開放中'?'btn-danger':'btn-green'}" onclick="toggleSurveyStatus('${esc(s.id)}','${esc(s.status)}')">${s.status==='開放中'?'結束問卷':s.status==='已結束'?'重新開放':'開放問卷'}</button><button class="btn btn-plain" onclick="copySurvey('${esc(s.id)}')">複製問卷</button><a class="btn btn-plain" href="${esc(s.spreadsheetUrl)}" target="_blank" style="text-decoration:none;text-align:center">開啟工作表</a></div></div>`).join(''):'<div class="notice">尚未建立問卷，請按上方按鈕建立第一份。</div>'}</div>`;
+}
+
+
+function newQuestion(type='text'){
+  const q={id:'q'+Math.random().toString(36).slice(2,10),label:'',type:type,required:false,maxQty:20,options:[]};
+  if(type==='items'){q.itemMode='product';q.basePrice=0;q.allowNote=true;q.options=[];}
+  else if(['single','multi','dropdown'].includes(type))q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
+  return q;
+}
+
+
+function blankSurvey(){return {title:'',description:'',allowEdit:true,questions:[newQuestion('text')]}}
+function newSurvey(){state.editSurveyId='';state.editDraft=blankSurvey();renderBuilder()}
+async function editSurvey(id){setBusy(true);try{const r=await api('getPublicSurvey',id);state.editSurveyId=id;state.editDraft=JSON.parse(JSON.stringify(r.survey));renderBuilder()}catch(err){toast(err.message)}finally{setBusy(false)}}
+function renderBuilder(){
+  const s=state.editDraft||blankSurvey();
+  $('adminContent').innerHTML=`<div class="card"><div class="section-title"><span class="emoji">🧩</span><h3>${state.editSurveyId?'編輯問卷':'設計新問卷'}</h3></div><div class="field"><label>問卷標題 *</label><input id="builderTitle" class="input" maxlength="120" value="${esc(s.title)}" placeholder="例如：員工旅遊報名調查"></div><div class="field"><label>問卷說明</label><textarea id="builderDescription" class="textarea" maxlength="1000" placeholder="填寫說明、截止日期等">${esc(s.description||'')}</textarea></div><label class="checkline"><input type="checkbox" id="builderAllowEdit" ${s.allowEdit!==false?'checked':''}> 使用者送出後，在問卷開放期間允許自行修改</label><div class="divider"></div><div class="order-top"><h3 style="margin:0">問卷題目</h3><span class="tiny muted">每題可設定必填或選填</span></div><div id="questionEditors">${s.questions.map((q,i)=>questionEditorHtml(q,i)).join('')}</div><div class="field"><label>新增題目類型</label><div class="editor-grid"><select id="newQuestionType" class="select"><option value="text">簡答題</option><option value="textarea">段落文字</option><option value="single">單選題</option><option value="multi">多選題</option><option value="dropdown">下拉選單</option><option value="date">日期題</option><option value="number">數字題</option><option value="rating">1～5 分評分</option><option value="items">商品／數量題</option></select><button class="btn btn-secondary" onclick="addQuestion()">＋ 新增題目</button></div></div><div class="btn-row"><button class="btn btn-primary" onclick="saveBuilder()">${state.editSurveyId?'儲存問卷修改':'建立並開放問卷'}</button><button class="btn btn-plain" onclick="setAdminTab('surveys')">返回問卷管理</button></div></div>`;
+}
+function questionEditorHtml(q,index){
+  const typeOptions=[['text','簡答題'],['textarea','段落文字'],['single','單選題'],['multi','多選題'],['dropdown','下拉選單'],['date','日期題'],['number','數字題'],['rating','1～5 分評分'],['items','商品／數量題']];
+  const mode=q.itemMode||(q.basePrice!==undefined?'product':'legacy');
+  const itemProduct=q.type==='items'&&mode==='product';
+  const itemLegacy=q.type==='items'&&mode!=='product';
+  let extra='';
+  if(itemProduct){
+    extra=`<div class="field"><label>商品單價</label><input class="input qe-base-price" type="number" min="0" step="any" value="${Number(q.basePrice||0)}" placeholder="商品單價"></div>
+      <div class="editor-grid"><div class="field"><label>商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>商品備註</label><label class="checkline" style="padding:12px 0"><input class="qe-allow-note" type="checkbox" ${q.allowNote!==false?'checked':''}> 允許填寫備註</label></div></div>
+      <div class="field"><label>客製化／加購選項</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增客製化選項</button><p class="tiny muted">例如加飯、加肉、加蛋、少冰。每個選項可設定自己的價格（可填 0 元）及最多數量。</p></div>`;
+  } else if(itemLegacy){
+    extra=`<div class="notice">這是舊版商品題。為保留舊問卷的商品與回覆資料，暫時沿用舊題型。新建立的商品／數量題會使用「題目名稱＝商品名稱」的新格式。</div><div class="field"><label>舊版每個商品選項最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>舊版商品選項</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增舊版商品選項</button></div>`;
+  } else if(['single','multi','dropdown'].includes(q.type)){
+    extra=`<div class="field"><label>選項設定（價格可填 0）</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增選項</button><p class="tiny muted">價格用於需要計價的選項；一般調查保持 0 即可。</p></div>`;
+  }
+  return `<div class="question-editor" data-qid="${esc(q.id)}" data-index="${index}" data-item-mode="${esc(mode)}"><div class="editor-head"><strong>第 ${index+1} 題</strong><button class="mini-btn" style="padding:7px 10px" onclick="removeQuestion('${esc(q.id)}')">刪除</button></div><div class="field"><label>${q.type==='items'?'商品名稱／題目名稱':'題目名稱'}</label><input class="input qe-label" maxlength="160" value="${esc(q.label)}" placeholder="${q.type==='items'?'例如：香煎雞腿便當':'請輸入題目'}"></div><div class="editor-grid"><div class="field"><label>題目類型</label><select class="select qe-type" onchange="changeQuestionType('${esc(q.id)}',this.value)">${typeOptions.map(x=>`<option value="${x[0]}" ${q.type===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="field"><label>填寫規則</label><label class="checkline" style="padding:12px 0"><input class="qe-required" type="checkbox" ${q.required?'checked':''}> 必填</label></div></div>${extra}</div>`;
+}
+function optionEditorHtml(o,isCustom=false){
+  if(isCustom)return `<div class="option-editor custom-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="客製化名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="單價"><input class="qe-option-maxqty" type="number" min="1" max="99" value="${Number(o.maxQty||5)}" placeholder="上限"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
+  return `<div class="option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="選項名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="價格"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
+}
+
+
+function readBuilderDraft(){
+  const questions=[];
+  document.querySelectorAll('#questionEditors .question-editor').forEach(box=>{
+    const type=box.querySelector('.qe-type').value;
+    const itemMode=box.dataset.itemMode||'product';
+    const q={id:box.dataset.qid,label:box.querySelector('.qe-label').value.trim(),type,required:box.querySelector('.qe-required').checked,maxQty:Number(box.querySelector('.qe-maxqty')?.value||20),options:[]};
+    if(type==='items'){
+      q.itemMode=itemMode;
+      if(itemMode==='product'){
+        q.basePrice=Number(box.querySelector('.qe-base-price')?.value||0);
+        q.allowNote=box.querySelector('.qe-allow-note')?.checked!==false;
+        box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0),maxQty:Number(op.querySelector('.qe-option-maxqty')?.value||5)}));
+      }else{
+        box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0)}));
+      }
+    }else{
+      box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0)}));
+    }
+    questions.push(q);
+  });
+  return {title:$('builderTitle').value.trim(),description:$('builderDescription').value.trim(),allowEdit:$('builderAllowEdit').checked,questions};
+}
+
+
+function addQuestion(){const draft=readBuilderDraft();draft.questions.push(newQuestion($('newQuestionType').value));state.editDraft=draft;renderBuilder()}
+function removeQuestion(id){const draft=readBuilderDraft();draft.questions=draft.questions.filter(q=>q.id!==id);if(!draft.questions.length)draft.questions.push(newQuestion('text'));state.editDraft=draft;renderBuilder()}
+function changeQuestionType(id,type){
+  const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
+  const oldType=q.type;q.type=type;
+  if(type==='items'&&oldType!=='items'){q.itemMode='product';q.basePrice=0;q.maxQty=20;q.allowNote=true;q.options=[];}
+  else if(type!=='items'){delete q.itemMode;delete q.basePrice;delete q.allowNote;}
+  if(['single','multi','dropdown'].includes(type)&&!q.options.length)q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
+  if(type==='items'&&q.itemMode==='product')q.options=q.options||[];
+  state.editDraft=draft;renderBuilder();
+}
+function addOption(id){
+  const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
+  if(q.type==='items'&&q.itemMode==='product')q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'加飯',price:0,maxQty:5});
+  else q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'新選項',price:0});
+  state.editDraft=draft;renderBuilder();
+}
+async function saveBuilder(){
+  const draft=readBuilderDraft();
+  if(!draft.title){toast('請填寫問卷標題');return;}
+  if(!draft.questions.length){toast('至少需要一個題目');return;}
+  if(draft.questions.some(q=>!q.label)){toast('請填寫每一題的名稱');return;}
+  for(const q of draft.questions){
+    if(['single','multi','dropdown'].includes(q.type)&&(!q.options.length||q.options.some(o=>!o.label))){toast('選項題至少需要一個選項，而且選項名稱不可空白');return;}
+    if(q.type==='items'&&q.itemMode==='product'){
+      if(!Number.isFinite(q.basePrice)||q.basePrice<0){toast('商品單價必須是 0 或正數');return;}
+      if(!Number.isInteger(q.maxQty)||q.maxQty<1||q.maxQty>99){toast('商品最多數量必須設定為 1 至 99 的整數');return;}
+      if(q.options.some(o=>!o.label||!Number.isFinite(o.price)||o.price<0||!Number.isInteger(o.maxQty)||o.maxQty<1||o.maxQty>99)){toast('請檢查客製化選項名稱、價格及數量上限');return;}
+    }
+    if(q.type==='items'&&q.itemMode==='legacy'&&(!q.options.length||q.options.some(o=>!o.label))){toast('舊版商品題至少需要一個有效商品選項');return;}
+  }
+  setBusy(true);try{let r;if(state.editSurveyId)r=await api('saveSurvey',state.token,state.editSurveyId,draft);else r=await api('createSurvey',state.token,Object.assign({},draft,{initialStatus:'開放中'}));toast(r.message);state.editDraft=null;state.editSurveyId='';await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}
+}
+async function toggleSurveyStatus(id,current){const next=current==='開放中'?'已結束':'開放中';const action=next==='開放中'?'重新開放':'結束';if(!confirm(`確定要${action}這份問卷「${next}」？`))return;setBusy(true);try{const r=await api('setSurveyStatus',state.token,id,next);toast(r.message);await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+async function copySurvey(id){if(!confirm('複製這份問卷的題目、商品及設定，建立全新的問卷與工作表？\n舊問卷的填寫結果不會複製。新問卷預設未開放。'))return;setBusy(true);try{const r=await api('copySurvey',state.token,id);toast(r.message+'：'+r.title);await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+async function viewResponses(id){setBusy(true);try{const r=await api('getAdminSurvey',state.token,id);state.adminSurvey=r.survey;state.adminResponses=r.responses;state.adminTab='responses';renderResponses()}catch(err){toast(err.message)}finally{setBusy(false)}}
+function buildShopOrderSummary(s, list) {
+  const rows = [];
+  (s.questions || []).forEach(q => {
+    if (q.type === 'items' && (q.itemMode === 'product' || q.basePrice !== undefined)) {
+      const productQty = list.reduce((sum, response) => {
+        const answer = response.answers && response.answers[q.id];
+        return sum + (answer && !Array.isArray(answer) ? Number(answer.productQty || 0) : 0);
+      }, 0);
+      const basePrice = Number(q.basePrice || 0);
+      if (productQty > 0) {
+        rows.push({
+          kind: '商品', name: q.label, option: '', price: basePrice,
+          qty: productQty, amount: basePrice * productQty
+        });
+      }
+      (q.options || []).forEach(option => {
+        const qty = list.reduce((sum, response) => {
+          const answer = response.answers && response.answers[q.id];
+          const selected = answer && !Array.isArray(answer)
+            ? (answer.customizations || []).find(item => item.optionId === option.id)
+            : null;
+          return sum + (selected ? Number(selected.qty || 0) : 0);
+        }, 0);
+        if (qty > 0) {
+          const price = Number(option.price || 0);
+          rows.push({
+            kind: '客製化／加購', name: q.label, option: option.label,
+            price, qty, amount: price * qty
+          });
+        }
+      });
+    } else if (q.type === 'items') {
+      // 舊版商品／數量題：保留歷史資料統計方式。
+      (q.options || []).forEach(option => {
+        const qty = list.reduce((sum, response) => {
+          const answer = response.answers && response.answers[q.id];
+          const selectedItems = Array.isArray(answer) ? answer : [];
+          const selected = selectedItems.find(item => item.optionId === option.id);
+          return sum + (selected ? Number(selected.qty || 0) : 0);
+        }, 0);
+        if (qty > 0) {
+          const price = Number(option.price || 0);
+          rows.push({
+            kind: '商品（舊版）', name: q.label, option: option.label,
+            price, qty, amount: price * qty
+          });
+        }
+      });
+    } else if (['single', 'dropdown', 'multi'].includes(q.type)) {
+      (q.options || []).filter(option => Number(option.price || 0) > 0).forEach(option => {
+        const qty = list.reduce((sum, response) => {
+          const answer = response.answers && response.answers[q.id];
+          if (q.type === 'multi') {
+            return sum + (Array.isArray(answer) && answer.includes(option.id) ? 1 : 0);
+          }
+          return sum + (answer === option.id ? 1 : 0);
+        }, 0);
+        if (qty > 0) {
+          const price = Number(option.price || 0);
+          rows.push({
+            kind: '計價選項', name: q.label, option: option.label,
+            price, qty, amount: price * qty
+          });
+        }
+      });
+    }
+  });
+  return {
+    rows,
+    total: list.reduce((sum, response) => sum + Number(response.amount || 0), 0)
+  };
+}
+function renderShopOrderSummaryHtml(summary){
+  if(!summary.rows.length)return `<div class="notice">目前沒有商品或計價項目。<br>回覆總金額：<b>${money(summary.total)}</b></div>`;
+  return `<div class="shop-summary-wrap"><table class="shop-summary"><thead><tr><th>類型</th><th>商品／題目</th><th>客製化內容</th><th>單價</th><th>數量</th><th>金額</th></tr></thead><tbody>${summary.rows.map(r=>`<tr><td>${esc(r.kind)}</td><td>${esc(r.name)}</td><td>${esc(r.option)}</td><td>${money(r.price)}</td><td>${r.qty}</td><td class="money-cell">${money(r.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">全部回覆總金額</td><td class="money-cell">${money(summary.total)}</td></tr></tfoot></table></div>`;
+}
+function renderResponses(){
+  const s=state.adminSurvey,list=state.adminResponses||[];const total=list.reduce((n,r)=>n+Number(r.amount||0),0);
+  const stats=s.questions.map(q=>{
+    const counts={};
+    list.forEach(r=>{const a=r.answers[q.id];if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);if(o)counts[o.label]=(counts[o.label]||0)+1}else if(q.type==='multi'){(Array.isArray(a)?a:[]).forEach(id=>{const o=(q.options||[]).find(x=>x.id===id);if(o)counts[o.label]=(counts[o.label]||0)+1})}});
+    return Object.keys(counts).length?`<div class="history-item"><b>${esc(q.label)}</b>${Object.entries(counts).map(([k,v])=>`<div class="answer-line">${esc(k)}：${v}</div>`).join('')}</div>`:'';
+  }).join('');
+  const shopSummary=buildShopOrderSummary(s,list);
+  $('main').innerHTML=`<button class="back" onclick="loadAdmin()">← 返回管理中心</button><section class="hero"><h2>${esc(s.title)}</h2><p>問卷回覆及統計資料</p></section><div class="card"><div class="stat-grid"><div class="stat"><b>${list.length}</b><span>回覆筆數</span></div><div class="stat"><b>${money(total)}</b><span>金額合計</span></div><div class="stat"><b>${s.status==='開放中'?'開放中':'已結束'}</b><span>問卷狀態</span></div></div><button class="btn btn-green btn-block" style="margin-top:12px" onclick="exportSurveyExcel('${esc(s.id)}')">下載 Excel（個人回覆＋店家統整）</button></div><div class="card"><h3>店家下單統整（含金額）</h3>${renderShopOrderSummaryHtml(shopSummary)}</div><div class="card"><h3>一般選項統計</h3>${stats||'<div class="muted small">目前沒有一般選項題的統計資料。</div>'}</div><div class="card"><h3>個別回覆</h3>${list.length?list.map(r=>`<div class="order-card"><div class="order-top"><b>${esc(r.name)}（電話末四碼 ${esc(r.phoneLast4)}）</b><span class="amount">${money(r.amount)}</span></div><div class="tiny muted">${esc(dateText(r.submittedAt))} ・ ${esc(r.responseId)}</div>${renderFilledAnswersHtml(s,r.answers)}<button class="btn btn-secondary btn-block" style="margin-top:10px" onclick="adminEditResponse('${esc(r.responseId)}')">管理者修改這筆回覆</button></div>`).join(''):'<div class="notice">目前沒有回覆。</div>'}</div>`;
+}
+function adminEditResponse(responseId){const r=state.adminResponses.find(x=>x.responseId===responseId);if(!r)return;const s=state.adminSurvey;showModal(`<h3>管理者修改回覆</h3><p class="small muted">${esc(r.name)} ・ ${esc(responseId)}</p><div id="adminQuestionForm">${s.questions.map(q=>renderQuestion(q,r.answers)).join('')}</div><div class="btn-row"><button class="btn btn-primary" onclick="saveAdminResponse('${esc(responseId)}')">儲存</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);document.querySelectorAll('#adminQuestionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability)}
+async function saveAdminResponse(id){const answers=collectAnswersFrom('#adminQuestionForm');setBusy(true);try{const r=await api('adminUpdateResponse',state.token,state.adminSurvey.id,id,answers);toast(r.message);closeModal();await viewResponses(state.adminSurvey.id)}catch(err){toast(err.message)}finally{setBusy(false)}}
+
+async function exportSurveyExcel(id){setBusy(true);try{const r=await api('exportSurveyXlsx',state.token,id);const raw=atob(r.base64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Excel 匯出完成')}catch(err){toast('匯出失敗：'+err.message)}finally{setBusy(false)}}
+function renderBackup(){const s=state.adminOverview.settings||{};const recoveryWarning=state.adminOverview.configCorrupted?`<div class="notice error">目前 JSON 設定檔無法讀取：${esc(state.adminOverview.configError||'格式錯誤')}。請從下方選擇有效的歷史備份進行還原；此時不要建立新問卷或修改備份設定。</div>`:'';$('adminContent').innerHTML=`<div class="card"><h3>☁️ 雲端備份與還原</h3>${recoveryWarning}<div class="notice success">設定自動備份：每次成功修改問卷設定前，自動保存上一版。每天凌晨約 3 點另建立完整備份。</div><div class="field"><label class="checkline"><input id="autoBackup" type="checkbox" ${s.autoBackup!==false?'checked':''}> 啟用自動雲端備份</label></div><div class="editor-grid"><div class="field"><label>設定版本保留數</label><input id="configKeep" type="number" class="input" min="10" max="100" value="${Number(s.configBackupKeep||50)}"></div><div class="field"><label>完整備份保留數</label><input id="fullKeep" type="number" class="input" min="3" max="30" value="${Number(s.fullBackupKeep||10)}"></div></div><button class="btn btn-secondary btn-block" onclick="saveBackupPrefs()">儲存備份設定</button><div class="divider"></div><div class="notice">最近完整備份：${esc(s.lastBackupAt||'尚未備份')}<br>手動備份會包含全部問卷設定及填寫結果。</div><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="runManualBackup()">☁ 立即雲端備份</button><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="refreshBackupList()">重新整理備份清單</button><div id="backupList" class="small muted" style="margin-top:12px">尚未載入備份清單。</div></div><div class="card"><h3>雲端檔案</h3><div class="btn-row"><a class="btn btn-plain" style="text-decoration:none;text-align:center" target="_blank" href="${esc(s.resultSpreadsheetUrl||'#')}">開啟問卷結果試算表</a><a class="btn btn-plain" style="text-decoration:none;text-align:center" target="_blank" href="${esc(s.jsonFileUrl||'#')}">開啟 JSON 設定</a></div></div>`;refreshBackupList()}
+async function saveBackupPrefs(){setBusy(true);try{const r=await api('saveBackupSettings',state.token,{autoBackup:$('autoBackup').checked,configBackupKeep:Number($('configKeep').value),fullBackupKeep:Number($('fullKeep').value)});toast(r.message);await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+async function runManualBackup(){setBusy(true);try{const r=await api('backupNow',state.token);toast(r.message);await refreshBackupList();await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+async function refreshBackupList(){const el=$('backupList');if(!el)return;el.innerHTML='正在讀取雲端備份…';try{const list=await api('listBackups',state.token);el.innerHTML=list.length?list.map(b=>`<div class="history-item"><div class="order-top"><b>${esc(b.type)}</b><span class="badge">${esc(dateText(b.createdAt))}</span></div><div class="tiny muted">${esc(b.description)} ・ ${Math.round(b.size/1024)} KB</div><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="previewRestore('${esc(b.id)}')">預覽／還原此版本</button></div>`).join(''):'<div class="notice">目前還沒有備份版本。</div>'}catch(err){el.innerHTML=`<div class="notice error">${esc(err.message)}</div>`}}
+async function previewRestore(id){setBusy(true);try{const p=await api('previewBackup',state.token,id);showModal(`<h3>備份版本預覽</h3><div class="notice">建立時間：${esc(dateText(p.createdAt))}<br>備份類型：${esc(p.type)}<br>問卷數：${p.surveyCount}<br>回覆數：${p.responseCount==null?'僅設定資料':p.responseCount}<br>問卷：${esc((p.titles||[]).join('、'))}</div><p class="small muted">還原前會自動保護目前資料。設定還原不會覆蓋現有回覆；完整還原會將該備份時間的回覆資料寫回對應工作表。</p><div class="btn-row"><button class="btn btn-primary" onclick="restoreSelected('${esc(id)}','settings')">只還原設定</button>${p.canRestoreFull?`<button class="btn btn-danger" onclick="restoreSelected('${esc(id)}','full')">完整還原</button>`:''}</div><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="closeModal()">取消</button>`)}catch(err){toast(err.message)}finally{setBusy(false)}}
+async function restoreSelected(id,mode){const message=mode==='full'?'完整還原會以備份當時的資料取代對應問卷工作表目前的回覆。':'只還原問卷設定，保留目前所有填寫結果。';if(!confirm(message+'\n確定繼續？'))return;setBusy(true);try{const r=await api('restoreBackup',state.token,id,mode);closeModal();toast(r.message);await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+function renderSecurity(){$('adminContent').innerHTML=`<div class="card"><h3>🔐 管理者密碼</h3><p class="small muted">密碼只儲存在 GAS Script Properties，前端及 JSON 設定檔不會保存密碼。</p><div class="field"><label>新密碼（8 至 64 個字元）</label><input id="newPassword" class="input" type="password" maxlength="64" autocomplete="new-password"></div><div class="field"><label>再次輸入新密碼</label><input id="newPassword2" class="input" type="password" maxlength="64" autocomplete="new-password"></div><button class="btn btn-primary btn-block" onclick="saveNewPassword()">修改管理者密碼</button></div>`}
+async function saveNewPassword(){const a=$('newPassword').value,b=$('newPassword2').value;if(a.length<8){toast('新密碼至少 8 個字元');return}if(a!==b){toast('兩次輸入的密碼不一致');return}setBusy(true);try{const r=await api('changeAdminPassword',state.token,a);toast(r.message);$('newPassword').value='';$('newPassword2').value=''}catch(err){toast(err.message)}finally{setBusy(false)}}
+
+initPwaInstall();
+renderStartupScreen();
+setupBridge();
 </script>
 </body>
 </html>
