@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.1.0">
+  <meta name="jq-pwa-version" content="10.2.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -51,6 +51,10 @@
     .shop-summary th{background:#fff4d5;color:#6d4d13}
     .shop-summary td.money-cell{text-align:right;font-weight:800;color:#9d650e}
     .shop-summary tfoot td{font-weight:950;background:#fff9e9}
+    .sync-status{font-size:12px;color:#8a7a5e;min-height:16px;margin:-7px 4px 9px;line-height:1.4}
+    .sync-status:empty{display:none}
+    .sync-status.error{color:#b85b4d}
+    .sync-status.syncing{color:#8a6a21}
 
     /* 已安裝並以 App 獨立視窗開啟時，立即隱藏整個安裝區。 */
     @media all and (display-mode: standalone){#installStrip{display:none!important}}
@@ -139,6 +143,7 @@
       <div class="brand"><h1>真好點問卷系統</h1><p>輕鬆設計問卷，快速收集每一份回覆</p></div>
     </header>
     <div class="install-strip" id="installStrip"><button class="install-btn" id="installBtn" type="button">📲 安裝為 APP</button></div>
+    <div id="syncStatus" class="sync-status" role="status" aria-live="polite"></div>
     <main id="main" aria-live="polite"></main>
     <div class="footer">真好點問卷系統 ・ 問卷設計與資料整理</div>
   </div>
@@ -149,6 +154,24 @@
 const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxw-JED9O-aW_x39VIOZJYeTb4Ou57eito80nsnYcqR3YM4FMQH49XMa3lbTjALbg9klA/exec';
 const CHANNEL = 'JINORDER_SURVEY_RPC_V1';
 const PROFILE_STORAGE_KEY = 'jinorder_profile_v1';
+const PUBLIC_CACHE_KEY = 'jinorder_public_data_v1';
+function readCachedPublicData(){
+  try{
+    const raw=localStorage.getItem(PUBLIC_CACHE_KEY);
+    if(!raw)return null;
+    const data=JSON.parse(raw);
+    if(!data||!Array.isArray(data.surveys))return null;
+    // 首頁快取僅包含公開問卷清單，不包含任何填寫者資料。
+    return {appName:String(data.appName||'真好點問卷系統'),surveys:data.surveys.filter(s=>s&&s.id&&s.title),cachedAt:String(data.cachedAt||'')};
+  }catch(e){return null}
+}
+function writeCachedPublicData(data){
+  try{
+    const safeData={appName:String(data.appName||'真好點問卷系統'),surveys:Array.isArray(data.surveys)?data.surveys:[],cachedAt:new Date().toISOString()};
+    localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify(safeData));
+  }catch(e){/* 本機空間不足或瀏覽器停用儲存時，不影響雲端使用。 */}
+}
+const initialPublicCache=readCachedPublicData();
 function readRememberedIdentity(){
   try{
     const saved=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'null');
@@ -170,7 +193,7 @@ function rememberIdentity(profile){
   return next;
 }
 const state = {
-  publicData:null, surveys:[], admin:false, token:'', adminTab:'surveys',
+  publicData:initialPublicCache, surveys:initialPublicCache?initialPublicCache.surveys:[], hasLoadedPublic:false, cloudUnavailable:false, cloudMessage:'', admin:false, token:'', adminTab:'surveys',
   activeSurvey:null, editingResponse:null, identity:readRememberedIdentity(), lookupSurveyId:'',
   adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
   logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
@@ -196,7 +219,15 @@ function toast(message){const el=$('toast');el.textContent=message;el.classList.
 function setBusy(on){document.body.classList.toggle('loading',!!on)}
 function showModal(html){$('modalRoot').innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`}
 function closeModal(){$('modalRoot').innerHTML=''}
-function setStatus(text,ok=true){/* 正常連線狀態不在首頁顯示；連線失敗仍由 renderError() 呈現。 */}
+function setStatus(text,ok=true){
+  const el=$('syncStatus');if(!el)return;
+  el.textContent=text||'';
+  el.classList.toggle('error',!ok);
+  el.classList.toggle('syncing',!!text&&/(同步|確認|連線|讀取)/.test(text)&&ok);
+  el.onclick=ok?null:retryCloudConnection;
+  el.style.cursor=ok?'default':'pointer';
+  el.title=ok?'':'點擊重新連線';
+}
 
 function makeBridgeNonce(){
   try{return Array.from(crypto.getRandomValues(new Uint8Array(18))).map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -227,28 +258,26 @@ function setupBridge(){
     if(!isTrustedGasOrigin(event.origin)||!event.data||event.data.channel!==CHANNEL||event.data.nonce!==nonce)return;
     if(event.data.type==='ready'){
       const port=event.ports&&event.ports[0];
-      if(!port){setStatus('GAS 橋接錯誤',false);renderError('GAS 已載入，但沒有提供安全訊息通道。請更新 GAS 後端至 v7.0.0。');return;}
+      if(!port){showCloudUnavailable('GAS 已載入，但沒有提供安全訊息通道。請確認 GAS 部署版本及存取權限。');return;}
       if(state.bridgePort){try{state.bridgePort.close()}catch(e){}}
       state.bridgePort=port;
       state.bridgePort.onmessage=handleBridgePortMessage;
       if(state.bridgePort.start)state.bridgePort.start();
       if(state.bridgeReady)return;
       state.bridgeReady=true;
-      setStatus('雲端已連線');
+      setStatus('雲端通道已就緒，正在背景同步…');
       loadPublic();
       return;
     }
     if(event.data.type==='bridge_error'){
-      setStatus('GAS 橋接錯誤',false);
-      renderError(event.data.error||'GAS 橋接頁未能啟動。請重新部署最新 Code.gs。');
+      showCloudUnavailable(event.data.error||'GAS 橋接頁未能啟動。請確認網路及 GAS 部署設定。');
     }
   });
   frame.addEventListener('load',()=>{
-    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立安全通道…',false);
+    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立安全通道…');
   });
   frame.addEventListener('error',()=>{
-    setStatus('GAS 載入失敗',false);
-    renderError('瀏覽器無法載入 GAS 橋接頁。請確認網路、部署權限及 GAS 網頁應用程式網址。');
+    showCloudUnavailable('瀏覽器無法載入 GAS 橋接頁。請確認網路、部署權限及 GAS 網頁應用程式網址。');
   });
   const bridgeUrl=new URL(GAS_EXEC_URL);
   bridgeUrl.searchParams.set('bridge','1');
@@ -257,8 +286,7 @@ function setupBridge(){
 
   setTimeout(()=>{
     if(!state.bridgeReady){
-      setStatus('連線逾時',false);
-      renderError('GAS 橋接頁已發出載入請求，但 25 秒內沒有收到安全通道。請確認已將 GAS Code.gs 更新至 v7.0.0，並部署為「以我執行／所有人均可存取」。');
+      showCloudUnavailable('雲端安全通道尚未建立（25 秒未收到回應）。目前仍可查看本機保存的問卷清單，請稍後重新連線。');
     }
   },25000);
 }
@@ -362,22 +390,56 @@ function renderBridgeSetup(){
 }
 function renderError(message){$('main').innerHTML=`<section class="hero"><h2>雲端連線暫時中斷</h2><p>請確認網路及 GAS 部署設定。</p></section><div class="card"><div class="notice error">${esc(message)}</div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="loadPublic()">重新連線</button></div>`}
 
+function retryCloudConnection(){
+  if(state.bridgeReady&&state.bridgePort){loadPublic();return;}
+  // 安全通道尚未建立時，重新載入頁面會重新建立 nonce 與 MessageChannel。
+  window.location.reload();
+}
+function showCloudUnavailable(message){
+  state.cloudUnavailable=true;
+  state.cloudMessage=String(message||'雲端資料暫時無法讀取。');
+  setStatus(state.publicData?'暫時無法同步，先顯示上次資料':'雲端連線暫時中斷',false);
+  // 有快取時絕不以錯誤頁蓋掉已顯示的首頁；沒有快取時也保留正常首頁框架。
+  if(!state.publicData&&!state.admin)renderHome();
+}
+function renderStartupScreen(){
+  // 啟動時先同步讀取本機快取，讓畫面不必等待 GAS iframe 與雲端試算表。
+  renderHome();
+  setStatus(state.publicData?'已載入本機問卷清單，正在背景確認雲端…':'正在背景連接雲端並讀取問卷…');
+}
 async function loadPublic(){
-  try{setBusy(true);const data=await api('getPublicData');state.publicData=data;state.surveys=data.surveys||[];setStatus('雲端已連線');renderHome();}
-  catch(err){setStatus('連線失敗',false);renderError(err.message)}finally{setBusy(false)}
+  // 首頁的雲端確認不鎖定畫面，也不降低頁面互動性。
+  state.cloudUnavailable=false;state.cloudMessage='';
+  setStatus(state.publicData?'正在背景同步雲端資料…':'正在背景讀取雲端問卷…');
+  try{
+    const data=await api('getPublicData');
+    if(!data||!Array.isArray(data.surveys))throw new Error('雲端回傳的問卷清單格式不正確。');
+    state.publicData=data;state.surveys=data.surveys;state.hasLoadedPublic=true;
+    state.cloudUnavailable=false;state.cloudMessage='';
+    writeCachedPublicData(data);
+    setStatus('雲端資料已同步');
+    if(!state.admin&&!$('questionForm'))renderHome();
+  }catch(err){
+    showCloudUnavailable(err.message);
+  }
 }
 function renderHome(){
   const open=state.surveys.filter(s=>s.status==='開放中');
   const hasAnySurvey=state.surveys.length>0;
-  const emptyMessage=hasAnySurvey
-    ? '目前沒有問卷進行中，請稍後再來。所有已結束問卷仍可在下方查詢自己的回覆。'
-    : '目前沒有問卷進行中，請稍後再來。管理者建立並開放問卷後，這裡就會自動顯示。';
-  $('main').innerHTML=`<section class="hero"><h2>每一份回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
+  const emptyMessage=!state.hasLoadedPublic
+    ? '正在背景確認雲端問卷資料，確認完成後會自動更新。'
+    : hasAnySurvey
+      ? '目前沒有問卷進行中，請稍後再來。所有已結束問卷仍可在下方查詢自己的回覆。'
+      : '目前沒有問卷進行中，管理者建立並開放問卷後，這裡就會自動顯示。';
+  const cloudNotice=state.cloudUnavailable
+    ? `<div class="notice error" style="margin-bottom:12px">${esc(state.cloudMessage||'雲端資料暫時無法讀取。')}${state.publicData?'<br>目前先顯示這台裝置上次保存的問卷清單。':''}<button class="btn btn-secondary btn-block" style="margin-top:9px" onclick="retryCloudConnection()">重新連線並同步</button></div>`
+    : (!state.publicData&&!state.hasLoadedPublic?'<div class="notice" style="margin-bottom:12px">首次載入正在背景確認雲端資料，首頁已先開啟，不需要停留在載入畫面。</div>':'');
+  $('main').innerHTML=`${cloudNotice}<section class="hero"><h2>每一份回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
     <section class="card"><div class="section-title"><span class="emoji">📝</span><h3>目前開放中的問卷</h3><span class="badge">${open.length} 份</span></div>
       ${open.length?`<div class="survey-grid">${open.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.description||'歡迎填寫本問卷')}</div></div><span class="badge">開放中</span></div><div class="survey-meta">建立時間：${esc(dateText(s.createdAt))}</div><div class="btn-row"><button class="btn btn-primary" onclick="openSurvey('${esc(s.id)}')">開始填寫</button><button class="btn btn-plain" onclick="openLookup('${esc(s.id)}')">查詢回覆</button></div></div>`).join('')}</div>`:`<div class="notice"><strong>目前沒有問卷進行中……</strong><br>${esc(emptyMessage)}</div>`}
     </section>
     <section class="card"><div class="section-title"><span class="emoji">🔎</span><h3>查詢以前的回覆</h3></div><p class="small muted">問卷結束後仍可查詢自己的回覆。必須輸入填寫時相同的姓名及電話，系統不會顯示其他人的資料。</p>
-      ${hasAnySurvey?`<div class="field"><label>選擇問卷</label><select id="lookupSurveySelect" class="select">${state.surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title)}（${esc(s.status)}）</option>`).join('')}</select></div><button class="btn btn-secondary btn-block" onclick="openLookup($('lookupSurveySelect').value)">查詢我的回覆</button>`:'<div class="notice">目前尚未建立任何問卷，暫時沒有可查詢的回覆。</div>'}
+      ${hasAnySurvey?`<div class="field"><label>選擇問卷</label><select id="lookupSurveySelect" class="select">${state.surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title)}（${esc(s.status)}）</option>`).join('')}</select></div><button class="btn btn-secondary btn-block" onclick="openLookup($('lookupSurveySelect').value)">查詢我的回覆</button>`:state.hasLoadedPublic?'<div class="notice">目前尚未建立任何問卷，暫時沒有可查詢的回覆。</div>':state.cloudUnavailable?'<div class="notice">目前無法取得問卷清單，請重新連線後再查詢。</div>':'<div class="notice">正在背景確認可查詢的問卷清單…</div>'}
     </section>`;
 }
 async function openSurvey(id,existing){
@@ -789,6 +851,7 @@ function renderSecurity(){$('adminContent').innerHTML=`<div class="card"><h3>�
 async function saveNewPassword(){const a=$('newPassword').value,b=$('newPassword2').value;if(a.length<8){toast('新密碼至少 8 個字元');return}if(a!==b){toast('兩次輸入的密碼不一致');return}setBusy(true);try{const r=await api('changeAdminPassword',state.token,a);toast(r.message);$('newPassword').value='';$('newPassword2').value=''}catch(err){toast(err.message)}finally{setBusy(false)}}
 
 initPwaInstall();
+renderStartupScreen();
 setupBridge();
 </script>
 </body>
