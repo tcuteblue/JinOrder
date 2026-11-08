@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.4.0">
+  <meta name="jq-pwa-version" content="10.5.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -699,10 +699,10 @@ function newSurvey(){state.editSurveyId='';state.editDraft=blankSurvey();renderB
 async function editSurvey(id){setBusy(true);try{const r=await api('getPublicSurvey',id);state.editSurveyId=id;state.editDraft=JSON.parse(JSON.stringify(r.survey));renderBuilder()}catch(err){toast(err.message)}finally{setBusy(false)}}
 function renderBuilder(){
   const s=state.editDraft||blankSurvey();
-  $('adminContent').innerHTML=`<div class="card"><div class="section-title"><span class="emoji">🧩</span><h3>${state.editSurveyId?'編輯問卷':'設計新問卷'}</h3></div><div class="field"><label>問卷標題 *</label><input id="builderTitle" class="input" maxlength="120" value="${esc(s.title)}" placeholder="例如：員工旅遊報名調查"></div><div class="field"><label>問卷說明</label><textarea id="builderDescription" class="textarea" maxlength="1000" placeholder="填寫說明、截止日期等">${esc(s.description||'')}</textarea></div><label class="checkline"><input type="checkbox" id="builderAllowEdit" ${s.allowEdit!==false?'checked':''}> 使用者送出後，在問卷開放期間允許自行修改</label><div class="divider"></div><div class="order-top"><h3 style="margin:0">問卷題目</h3><span class="tiny muted">每題可設定必填或選填</span></div><div id="questionEditors">${s.questions.map((q,i)=>questionEditorHtml(q,i)).join('')}</div><div class="field"><label>新增題目類型</label><div class="editor-grid"><select id="newQuestionType" class="select"><option value="text">簡答題</option><option value="textarea">段落文字</option><option value="single">單選題</option><option value="multi">多選題</option><option value="dropdown">下拉選單</option><option value="date">日期題</option><option value="number">數字題</option><option value="rating">1～5 分評分</option><option value="items">商品／數量題</option></select><button class="btn btn-secondary" onclick="addQuestion()">＋ 新增題目</button></div></div><div class="btn-row"><button class="btn btn-primary" onclick="saveBuilder()">${state.editSurveyId?'儲存問卷修改':'建立並開放問卷'}</button><button class="btn btn-plain" onclick="setAdminTab('surveys')">返回問卷管理</button></div></div>`;
+  $('adminContent').innerHTML=`<div class="card"><div class="section-title"><span class="emoji">🧩</span><h3>${state.editSurveyId?'編輯問卷':'設計新問卷'}</h3></div><div class="field"><label>問卷標題 *</label><input id="builderTitle" class="input" maxlength="120" value="${esc(s.title)}" placeholder="例如：員工旅遊報名調查"></div><div class="field"><label>問卷說明</label><textarea id="builderDescription" class="textarea" maxlength="1000" placeholder="填寫說明、截止日期等">${esc(s.description||'')}</textarea></div><label class="checkline"><input type="checkbox" id="builderAllowEdit" ${s.allowEdit!==false?'checked':''}> 使用者送出後，在問卷開放期間允許自行修改</label><div class="divider"></div><div class="order-top"><h3 style="margin:0">問卷題目</h3><span class="tiny muted">每題可設定必填或選填</span></div><div id="questionEditors">${s.questions.map((q,i)=>questionEditorHtml(q,i)).join('')}</div><div class="field"><label>新增題目類型</label><div class="editor-grid"><select id="newQuestionType" class="select"><option value="items">商品題</option><option value="text">簡答題</option><option value="textarea">段落文字</option><option value="single">單選題</option><option value="multi">多選題</option><option value="dropdown">下拉選單</option><option value="date">日期題</option><option value="number">數字題</option><option value="rating">1～5 分評分</option></select><button class="btn btn-secondary" onclick="addQuestion()">＋ 新增題目</button></div></div><div class="btn-row"><button class="btn btn-primary" onclick="saveBuilder()">${state.editSurveyId?'儲存問卷修改':'建立並開放問卷'}</button><button class="btn btn-plain" onclick="setAdminTab('surveys')">返回問卷管理</button></div></div>`;
 }
 function questionEditorHtml(q,index){
-  const typeOptions=[['text','簡答題'],['textarea','段落文字'],['single','單選題'],['multi','多選題'],['dropdown','下拉選單'],['date','日期題'],['number','數字題'],['rating','1～5 分評分'],['items','商品／數量題']];
+  const typeOptions=[['items','商品題'],['text','簡答題'],['textarea','段落文字'],['single','單選題'],['multi','多選題'],['dropdown','下拉選單'],['date','日期題'],['number','數字題'],['rating','1～5 分評分']];
   const mode=q.type==='items'?'product':'';
   let extra='';
   if(q.type==='items'){
@@ -867,6 +867,20 @@ async function refreshBackupList(){const el=$('backupList');if(!el)return;el.inn
 async function previewRestore(id){setBusy(true);try{const p=await api('previewBackup',state.token,id);showModal(`<h3>備份版本預覽</h3><div class="notice">建立時間：${esc(dateText(p.createdAt))}<br>備份類型：${esc(p.type)}<br>問卷數：${p.surveyCount}<br>回覆數：${p.responseCount==null?'僅設定資料':p.responseCount}<br>問卷：${esc((p.titles||[]).join('、'))}</div><p class="small muted">還原前會自動保護目前資料。設定還原不會覆蓋現有回覆；完整還原會將該備份時間的回覆資料寫回對應工作表。</p><div class="btn-row"><button class="btn btn-primary" onclick="restoreSelected('${esc(id)}','settings')">只還原設定</button>${p.canRestoreFull?`<button class="btn btn-danger" onclick="restoreSelected('${esc(id)}','full')">完整還原</button>`:''}</div><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="closeModal()">取消</button>`)}catch(err){toast(err.message)}finally{setBusy(false)}}
 async function restoreSelected(id,mode){const message=mode==='full'?'完整還原會以備份當時的資料取代對應問卷工作表目前的回覆。':'只還原問卷設定，保留目前所有填寫結果。';if(!confirm(message+'\n確定繼續？'))return;setBusy(true);try{const r=await api('restoreBackup',state.token,id,mode);closeModal();toast(r.message);await loadAdmin({preserveTab:true});}catch(err){toast(err.message)}finally{setBusy(false)}}
 async function saveNewPassword(){const a=$('newPassword').value,b=$('newPassword2').value;if(a.length<8){toast('新密碼至少 8 個字元');return}if(a!==b){toast('兩次輸入的密碼不一致');return}setBusy(true);try{const r=await api('changeAdminPassword',state.token,a);toast(r.message);$('newPassword').value='';$('newPassword2').value=''}catch(err){toast(err.message)}finally{setBusy(false)}}
+
+// 點選可輸入文字的欄位時自動全選，方便直接覆寫原內容。
+// 數字、日期、下拉選單、單選／多選等控制項不受影響。
+document.addEventListener('focusin', event => {
+  const field = event.target;
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
+  if (field.disabled || field.readOnly) return;
+  if (field instanceof HTMLInputElement) {
+    const selectableTypes = ['text', 'tel', 'email', 'search', 'url', 'password'];
+    const inputType = (field.type || 'text').toLowerCase();
+    if (!selectableTypes.includes(inputType)) return;
+  }
+  try { field.select(); } catch (error) { /* 部分行動瀏覽器不支援的欄位略過。 */ }
+});
 
 initPwaInstall();
 renderStartupScreen();
