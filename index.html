@@ -1,865 +1,1551 @@
-<!doctype html>
+/**
+ * 真好點問卷系統 - Google Apps Script 後端
+ * 版本：10.0.0
+ *
+ * 架構：
+ * 1) 使用者及管理者均從 GitHub Pages 開啟： https://tcuteblue.github.io/JinOrder/
+ * 2) GAS 僅提供 API bridge（doGet?bridge=1），前端透過隱藏 iframe 建立 MessageChannel，雙向呼叫 GAS API。
+ * 3) 指定 Drive 資料夾內只維持一份 JSON 設定檔及一份結果試算表。
+ * 4) 每份問卷在同一份結果試算表內建立一個工作表，可同時開放多份問卷。
+ *
+ * GAS 必須由「真好點問卷結果」試算表的「擴充功能 > Apps Script」建立（容器綁定）。
+ * 首次部署後，先執行 testStorageAccess()，成功後再執行 initializeSurveySystem()。
+ */
+
+const JQ = Object.freeze({
+  APP_NAME: '真好點問卷系統',
+  APP_VERSION: '10.3.0',
+  DRIVE_FOLDER_ID: '1zMbzSUOb2sJRUvSt2egLi-llPKj-pnRF',
+  RESULT_SPREADSHEET_ID: '10QrQgmHKXFbG1_fQhO8J_CjhqS7fZK1r1k7rMBwjO8Q',
+  JSON_FILE_NAME: '真好點問卷系統設定.json',
+  RESULT_FILE_NAME: '真好點問卷結果',
+  OVERVIEW_SHEET: '問卷總覽',
+  BACKUP_SHEET: '_雲端備份紀錄',
+  DEFAULT_ADMIN_PASSWORD: '41927',
+  PARENT_ORIGIN: 'https://tcuteblue.github.io',
+  TOKEN_TTL_SECONDS: 21600,
+  MAX_LOGIN_FAILURES: 8,
+  LOGIN_LOCK_SECONDS: 600,
+  CONFIG_BACKUP_KEEP: 50,
+  FULL_BACKUP_KEEP: 10,
+  BACKUP_CHUNK_SIZE: 30000,
+  MAX_QUESTIONS: 60,
+  MAX_TEXT: 3000
+});
+
+const QUESTION_TYPES = ['text', 'textarea', 'single', 'multi', 'dropdown', 'date', 'number', 'rating', 'items'];
+const PUBLIC_API_METHODS = Object.freeze({
+  getPublicData: true,
+  getPublicSurvey: true,
+  submitResponse: true,
+  lookupMyResponse: true,
+  editMyResponse: true,
+  loginAdmin: true,
+  getAdminOverview: true,
+  getAdminSurvey: true,
+  createSurvey: true,
+  copySurvey: true,
+  saveSurvey: true,
+  setSurveyStatus: true,
+  adminUpdateResponse: true,
+  changeAdminPassword: true,
+  saveBackupSettings: true,
+  backupNow: true,
+  listBackups: true,
+  previewBackup: true,
+  restoreBackup: true,
+  exportSurveyXlsx: true
+});
+
+/**
+ * 試算表開啟時建立快捷選單。
+ * onOpen 僅建立選單，不在簡易觸發器中呼叫 Drive/Sheets 的授權操作。
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('真好點問卷系統')
+    .addItem('測試雲端資料存取', 'testStorageAccess')
+    .addItem('初始化／檢查系統', 'initializeSurveySystem')
+    .addToUi();
+}
+
+/**
+ * GitHub Pages 用 API bridge。
+ * health=1：提供可直接用瀏覽器檢查的部署版本頁面。
+ * bridge=1：回傳隱藏橋接頁，跨越 Apps Script HTML Service iframe 時以 window.top 傳訊。
+ */
+function doGet(e) {
+  const params = (e && e.parameter) ? e.parameter : {};
+
+  if (String(params.health || '') === '1') {
+    const html = [
+      '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      '<title>真好點 GAS 連線診斷</title>',
+      '<style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;line-height:1.7;background:#fff9e8;color:#342d22}.ok{color:#187a43;font-weight:800}.card{max-width:680px;margin:auto;background:white;border-radius:18px;padding:22px;box-shadow:0 8px 28px #0001}code{overflow-wrap:anywhere}</style>',
+      '</head><body><main class="card"><h2>真好點問卷系統 GAS 診斷</h2>',
+      '<p class="ok">GAS 網頁應用程式已成功回應。</p>',
+      '<p>後端版本：<b>' + JQ.APP_VERSION + '</b></p>',
+      '<p>部署檢查時間：<code>' + new Date().toISOString() + '</code></p>',
+      '<p>這個頁面只檢查 GAS 網頁應用程式是否載入，不會讀取或顯示問卷資料。</p>',
+      '<p>若看到這個頁面，代表 /exec 網址及目前部署版本可以正常回應。</p>',
+      '</main></body></html>'
+    ].join('');
+    return HtmlService.createHtmlOutput(html)
+      .setTitle('真好點 GAS 連線診斷')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (String(params.bridge || '') === '1') {
+    const nonce = String(params.nonce || '').slice(0, 120);
+    return HtmlService.createHtmlOutput(buildBridgeHtml_(nonce))
+      .setTitle('真好點問卷系統 API Bridge')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  return HtmlService.createHtmlOutput(
+    '<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:28px;line-height:1.7"><h2>真好點問卷系統</h2><p>這是系統後端服務網址，請由 GitHub Pages 正式入口開啟：</p><p><a href="https://tcuteblue.github.io/JinOrder/">https://tcuteblue.github.io/JinOrder/</a></p><p>診斷網址：在本網址後方加上 <code>?health=1</code></p></body></html>'
+  ).setTitle('真好點問卷系統後端');
+}
+
+/**
+ * GitHub Pages 與 GAS API 的 iframe 橋接頁。
+ * 重點：Apps Script HTML Service 會使用 iframe sandbox，必須向最上層頁面 window.top 傳訊，
+ * 不可假設 parent 一定就是 GitHub Pages。請求來源、來源網域、channel 與每次載入 nonce 均須符合才處理。
+ */
+function buildBridgeHtml_(nonce) {
+  const config = JSON.stringify({
+    parentOrigin: JQ.PARENT_ORIGIN,
+    nonce: String(nonce || ''),
+    channel: 'JINORDER_SURVEY_RPC_V1',
+    version: JQ.APP_VERSION
+  });
+
+  // GAS HTML Service 會再建立一層 sandbox iframe。
+  // 因此不能讓 GitHub 對最外層 GAS iframe postMessage 後，期待內層 sandbox 自動收到。
+  // 改由內層 sandbox 主動把 MessagePort 轉交 GitHub，之後雙向 API 都走此 Port。
+  const html = `<!doctype html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.3.0">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="真好點">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/png" href="ico.png">
-  <link rel="apple-touch-icon" href="ico.png">
-  <meta name="application-name" content="真好點問卷系統">
-  <style>
-    :root{--yellow:#ffc928;--yellow2:#ffe58b;--orange:#ff8d3a;--pink:#ff7797;--green:#4dbb83;--blue:#69b8ed;--ink:#34302a;--muted:#827b70;--paper:#fffdf7;--line:#f0e6d0;--shadow:0 10px 28px rgba(109,82,20,.10)}
-    *{box-sizing:border-box}body{font-size:18px;margin:0;background:linear-gradient(160deg,#fff8df 0%,#fffdf8 42%,#fff1e6 100%);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;min-height:100vh}
-    button,input,textarea,select{font:inherit}button{cursor:pointer;border:0}button:disabled{opacity:.55;cursor:not-allowed}a{color:#246eae}
-    .app{max-width:900px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom))}
-    .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}.logo{width:58px;height:58px;border-radius:19px;background:linear-gradient(145deg,#ffe578,#ffad30);display:grid;place-items:center;box-shadow:0 7px 15px #e8af3c55;user-select:none;touch-action:manipulation;flex:none;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:25px;margin:0;font-weight:950;letter-spacing:1px}.brand p{margin:3px 0 0;color:var(--muted);font-size:14px}.top-right{margin-left:auto;display:flex;align-items:center;gap:7px}.install-btn{padding:8px 10px;border-radius:99px;background:#fff3c6;border:1px solid #edc54c;color:#76520e;font-size:14px;font-weight:900;white-space:nowrap;box-shadow:0 3px 9px #c58b2220}.install-btn:active{transform:scale(.97)}.install-btn.installed{background:#e8f8ed;border-color:#b9dfc3;color:#27794a}.install-strip{display:flex;justify-content:flex-end;align-items:center;margin:-5px 0 13px}.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:800;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
-    .hero{border-radius:26px;padding:23px;background:linear-gradient(125deg,#ffdc67,#ffb54e 55%,#ff9672);color:#573719;position:relative;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}.hero:after{content:"✦";position:absolute;right:24px;bottom:-36px;font-size:137px;opacity:.22;transform:rotate(18deg)}.hero h2{font-size:25px;margin:0 0 7px;max-width:78%;line-height:1.35}.hero p{font-size:15px;margin:0;max-width:77%;line-height:1.65}
-    .card{background:rgba(255,255,255,.95);border:1px solid rgba(242,226,190,.9);border-radius:22px;padding:18px;margin:14px 0;box-shadow:var(--shadow)}.card h3{margin:0 0 14px;font-size:19px}.section-title{display:flex;align-items:center;gap:8px}.section-title h3{margin:0}.emoji{font-size:24px}.muted{color:var(--muted)}.small{font-size:14px}.tiny{font-size:13px}.field{margin:13px 0}.field label,.field-label{display:block;font-weight:850;font-size:16px;margin-bottom:7px}.required{font-size:12px;color:#e45763;background:#fff0f0;padding:3px 7px;border-radius:99px;margin-left:6px}.optional{font-size:12px;color:#7a8b54;background:#f2f8e9;padding:3px 7px;border-radius:99px;margin-left:6px}
-    .input,.textarea,.select{width:100%;border:1.5px solid #e9dfcc;background:#fffefa;border-radius:13px;padding:12px 13px;outline:none;color:var(--ink);min-height:45px}.input:focus,.textarea:focus,.select:focus{border-color:#eab82f;box-shadow:0 0 0 3px #ffd95d35}.textarea{min-height:84px;resize:vertical}
-    .option-list{display:grid;gap:8px}.option{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #eee5d7;border-radius:14px;background:#fffefa}.option:has(input:checked){border-color:#f0be34;background:#fff9e5}.option input{accent-color:#e9a900;width:18px;height:18px}.option-name{flex:1;font-size:16px;font-weight:650}.price{font-size:15px;color:#d47b1c;font-weight:850}.qty-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qty{width:72px;text-align:center;padding:7px;border:1px solid #e9dfcc;border-radius:10px}.note-input{margin-top:8px;font-size:15px}
-    .btn{padding:12px 16px;border-radius:13px;font-weight:850;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,#ffc928,#ffad35);color:#503715;box-shadow:0 5px 13px #e6ad3438}.btn-secondary{background:#fff3ce;color:#795719}.btn-plain{background:#f7f3e9;color:#665c4d}.btn-danger{background:#fff0ee;color:#bd4c43}.btn-green{background:#e8f8ed;color:#27794a}.btn-blue{background:#e8f3ff;color:#286a9c}.btn-block{width:100%}.btn-row{display:flex;gap:9px;flex-wrap:wrap}.btn-row>*{flex:1;min-width:115px}.total-box{background:#fff6d9;border:1px dashed #efbf3d;padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;margin:14px 0}.total-box strong{font-size:27px;color:#c77b07}.notice{padding:12px 14px;border-radius:13px;background:#fff7df;color:#805e16;font-size:15px;line-height:1.65}.notice.error{background:#fff0ee;color:#b54e43}.notice.success{background:#eaf8ed;color:#28774a}.hidden{display:none!important}.divider{height:1px;background:var(--line);margin:14px 0}
-    .survey-card{border:1px solid #f0e3c8;border-radius:18px;padding:15px;margin:10px 0;background:linear-gradient(145deg,#fffefa,#fff9e9)}.survey-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.survey-head h3{margin:0 0 5px;font-size:18px}.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:13px;font-weight:850;background:#eaf8ed;color:#357849;white-space:nowrap}.badge.closed{background:#f2efeb;color:#81776b}.badge.draft{background:#eaf3ff;color:#326d9c}.survey-meta{color:var(--muted);font-size:13px;margin:8px 0 11px}
-    .admin-tabs{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:8px;overflow:visible;padding:0 0 4px;margin:0 0 12px}.admin-tabs .tab{flex:0 0 auto;white-space:nowrap;padding:10px 14px;border-radius:12px;background:#f6f0e2;color:#75664f;font-weight:850;font-size:15px}.admin-tabs .tab.active{background:#ffdd72;color:#60410d}
-    .question-editor{border:1px solid #eee3ce;border-radius:16px;padding:13px;margin:12px 0;background:#fffefa}.editor-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}.editor-head strong{flex:1}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.option-editor{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:6px;margin:7px 0}.option-editor input{min-width:0;padding:9px;border:1px solid #e8dfce;border-radius:10px}.mini-btn{border-radius:10px;background:#fff0ed;color:#ba5548;font-weight:900}.checkline{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}.checkline input{accent-color:#d99a16;width:17px;height:17px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px;background:#fff6df;border-radius:14px;text-align:center}.stat b{display:block;font-size:22px;color:#9b6c0a}.stat span{font-size:13px;color:#81745d}.order-card,.history-item{border:1px solid #eee3ce;border-radius:15px;padding:13px;margin:10px 0}.order-top{display:flex;gap:8px;align-items:center;justify-content:space-between}.amount{color:#c77b07;font-size:20px;font-weight:900}.answer-line{padding:7px 0;border-bottom:1px dashed #eee3ce;font-size:15px}.answer-line:last-child{border-bottom:0}.modal-backdrop{position:fixed;inset:0;background:#2d251b77;display:grid;place-items:center;padding:16px;z-index:30}.modal{width:min(100%,480px);max-height:90vh;overflow:auto;background:#fffdf7;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 13px}.toast{position:fixed;z-index:50;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 18px;background:#332d25;color:white;border-radius:99px;font-size:15px;box-shadow:var(--shadow);max-width:90%;text-align:center}.loading{opacity:.68;pointer-events:none}.footer{text-align:center;color:#a69b88;font-size:13px;padding:16px 0 4px}.back{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#80652b;padding:7px 0;font-weight:800}.link{background:none;color:#2475b8;padding:0;text-decoration:underline;font-size:14px}
-
-    /* v10 商品／數量題：商品與客製化數量使用大型 +/- 控制器 */
-    .product-qty-panel{border:1.5px solid #f1dfb8;background:#fffaf0;border-radius:16px;padding:13px;margin:10px 0}
-    .product-price-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-weight:850}
-    .product-price-line strong{font-size:20px;color:#c77b07}
-    .qty-control{display:flex;align-items:center;gap:10px;flex:none}
-    .qty-control button{width:44px;height:44px;border-radius:12px;background:#fff0c6;color:#76520e;font-size:25px;font-weight:950;box-shadow:0 3px 0 #e8c66e;line-height:1}
-    .qty-control button:disabled{opacity:.35;box-shadow:none}
-    .qty-control input.qty-value{width:76px;height:46px;border:2px solid #e8c96f;border-radius:12px;background:#fff;text-align:center;font-size:22px;font-weight:950;color:#4e3b16;padding:4px}
-    .qty-control input.qty-value:disabled{background:#f3f0e8;color:#aaa}
-    .qty-control.compact button{width:40px;height:40px;font-size:23px}
-    .qty-control.compact input.qty-value{width:68px;height:42px;font-size:20px}
-    .customization-list{border-top:1px dashed #e9d9b4;margin-top:13px;padding-top:11px}
-    .customization-list h4{font-size:15px;margin:0 0 8px;color:#735726}
-    .customization-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f1eadb}
-    .customization-row:last-child{border-bottom:0}
-    .customization-info{min-width:0;flex:1}.customization-info strong{font-size:16px}.customization-info .tiny{display:block;margin-top:3px}
-    .item-product-note{margin-top:12px}
-    .option-editor.custom-option-editor{grid-template-columns:minmax(0,1fr) 82px 78px 36px}
-    .question-editor .product-base-price-field{padding:12px 13px;background:#fff8e4;border:1px solid #f0d58e;border-radius:14px;margin:14px 0}
-    .question-editor .product-base-price-field label{color:#76520e;font-weight:900}
-    .question-editor .product-base-price-field input{font-size:19px;font-weight:900;border-color:#e7c66d;background:#fff}
-    .question-editor .item-options-title{font-weight:900;color:#705321;margin:12px 0 7px}
-    .option-editor.product-option-editor{grid-template-columns:minmax(0,1fr) minmax(100px,125px) 36px}
-    .shop-summary-wrap{overflow-x:auto}
-    .shop-summary{width:100%;border-collapse:collapse;min-width:450px;font-size:14px}
-    .shop-summary th,.shop-summary td{padding:9px 8px;border-bottom:1px solid #eee3ce;text-align:left;white-space:nowrap}
-    .shop-summary th{background:#fff4d5;color:#6d4d13}
-    .shop-summary td.money-cell{text-align:right;font-weight:800;color:#9d650e}
-    .shop-summary tfoot td{font-weight:950;background:#fff9e9}
-    .sync-status{font-size:12px;color:#8a7a5e;min-height:16px;margin:-7px 4px 9px;line-height:1.4}
-    .sync-status:empty{display:none}
-    .sync-status.error{color:#b85b4d}
-    .sync-status.syncing{color:#8a6a21}
-
-    /* 已安裝並以 App 獨立視窗開啟時，立即隱藏整個安裝區。 */
-    @media all and (display-mode: standalone){#installStrip{display:none!important}}
-    @media all and (display-mode: fullscreen){#installStrip{display:none!important}}
-    #gasBridge{position:absolute;width:1px;height:1px;left:-10000px;top:-10000px;border:0;opacity:0;pointer-events:none}
-    @media(min-width:680px){.app{padding-top:24px}.hero{padding:29px}.hero h2{font-size:29px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .field{margin:6px 0 12px}.survey-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.survey-grid .survey-card{margin:0}.admin-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}.admin-layout .card{margin:0}}
-  </style>
-
-<script id="jq-dynamic-pwa-manifest">
-(function(){
-  "use strict";
-  // 真好點單檔 PWA：Manifest 由 Blob 動態生成，圖示使用 GitHub Pages 根目錄的 ico.png。
-  // GitHub Pages 正式網址位於 /JinOrder/，因此所有安裝路徑都轉成絕對網址。
-  let appBaseUrl;
-  try {
-    const isVirtual = window.location.href.startsWith('blob:') || window.location.href.startsWith('data:');
-    appBaseUrl = isVirtual
-      ? new URL('./', document.referrer || (window.location.origin + '/JinOrder/')).href
-      : new URL('./', window.location.href).href;
-  } catch (e) {
-    appBaseUrl = 'https://tcuteblue.github.io/JinOrder/';
-  }
-
-  let iconUrl;
-  try {
-    const isVirtual = window.location.href.startsWith('blob:') || window.location.href.startsWith('data:');
-    iconUrl = new URL('ico.png', isVirtual ? appBaseUrl : window.location.href).href;
-  } catch (e) {
-    iconUrl = new URL('ico.png', appBaseUrl).href;
-  }
-
-  const startUrl = new URL('./?source=pwa', appBaseUrl).href;
-  const svgFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23ff9b24'/%3E%3Ccircle cx='50' cy='43' r='29' fill='%23ffd928' stroke='%231b1b1b' stroke-width='5'/%3E%3Ccircle cx='40' cy='38' r='3.5'/%3E%3Ccircle cx='60' cy='38' r='3.5'/%3E%3Cpath d='M37 52 Q50 66 63 52' fill='none' stroke='%231b1b1b' stroke-width='5' stroke-linecap='round'/%3E%3Ctext x='50' y='91' font-size='15' font-weight='900' text-anchor='middle' fill='white' stroke='%23d94b18' stroke-width='1.5' paint-order='stroke'%3E真%3C/text%3E%3C/svg%3E";
-
-  const manifest = {
-    id: appBaseUrl,
-    name: '真好點問卷系統',
-    short_name: '真好點',
-    description: '輕鬆設計問卷，快速收集與整理回答。',
-    lang: 'zh-TW',
-    start_url: startUrl,
-    scope: appBaseUrl,
-    display: 'standalone',
-    display_override: ['standalone', 'minimal-ui'],
-    orientation: 'portrait',
-    background_color: '#fff8e7',
-    theme_color: '#ffc928',
-    prefer_related_applications: false,
-    icons: [
-      // 沿用已實際成功安裝的信用卡夾範例：同一個正式 PNG 提供 192 / 512 尺寸宣告。
-      { src: iconUrl, sizes: '192x192 512x512', type: 'image/png', purpose: 'any maskable' },
-      { src: svgFallback, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
-    ]
-  };
-
-  const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-  const manifestUrl = URL.createObjectURL(manifestBlob);
-  const manifestLink = document.createElement('link');
-  manifestLink.rel = 'manifest';
-  manifestLink.href = manifestUrl;
-  document.head.appendChild(manifestLink);
-
-  // 瀏覽器分頁圖示及 iOS 主畫面圖示，均讀取根目錄 ico.png。
-  const favicon = document.createElement('link');
-  favicon.rel = 'icon';
-  favicon.type = 'image/png';
-  favicon.href = iconUrl;
-  document.head.appendChild(favicon);
-
-  const appleIcon = document.createElement('link');
-  appleIcon.rel = 'apple-touch-icon';
-  appleIcon.href = iconUrl;
-  document.head.appendChild(appleIcon);
-
-  window.__JQ_LOGO_URL__ = iconUrl;
-  window.__JQ_MANIFEST_URL__ = manifestUrl;
-  window.__JQ_PWA_ICON_URL__ = iconUrl;
-})();
-</script>
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body>
-  <iframe id="gasBridge" title="真好點雲端服務" aria-hidden="true"></iframe>
-  <div class="app">
-    <header class="top">
-      <div class="logo" id="logoTap" title="真好點問卷系統"><img id="logoImage" alt="真好點 Logo" /></div>
-      <div class="brand"><h1>真好點問卷系統</h1><p>輕鬆設計問卷，快速收集每一份回覆</p></div>
-    </header>
-    <div class="install-strip" id="installStrip"><button class="install-btn" id="installBtn" type="button">📲 安裝為 APP</button></div>
-    <div id="syncStatus" class="sync-status" role="status" aria-live="polite"></div>
-    <main id="main" aria-live="polite"></main>
-    <div class="footer">真好點問卷系統 ・ 問卷設計與資料整理</div>
-  </div>
-  <div id="modalRoot"></div><div id="toast" class="toast hidden"></div>
 <script>
 'use strict';
-/* 部署完成後，將 GAS /exec 網址貼在下方，然後更新 GitHub Pages 的 index.html。 */
-const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxw-JED9O-aW_x39VIOZJYeTb4Ou57eito80nsnYcqR3YM4FMQH49XMa3lbTjALbg9klA/exec';
-const CHANNEL = 'JINORDER_SURVEY_RPC_V1';
-const PROFILE_STORAGE_KEY = 'jinorder_profile_v1';
-const PUBLIC_CACHE_KEY = 'jinorder_public_data_v1';
-function readCachedPublicData(){
-  try{
-    const raw=localStorage.getItem(PUBLIC_CACHE_KEY);
-    if(!raw)return null;
-    const data=JSON.parse(raw);
-    if(!data||!Array.isArray(data.surveys))return null;
-    // 首頁快取僅包含公開問卷清單，不包含任何填寫者資料。
-    return {appName:String(data.appName||'真好點問卷系統'),surveys:data.surveys.filter(s=>s&&s.id&&s.title),cachedAt:String(data.cachedAt||'')};
-  }catch(e){return null}
-}
-function writeCachedPublicData(data){
-  try{
-    const safeData={appName:String(data.appName||'真好點問卷系統'),surveys:Array.isArray(data.surveys)?data.surveys:[],cachedAt:new Date().toISOString()};
-    localStorage.setItem(PUBLIC_CACHE_KEY,JSON.stringify(safeData));
-  }catch(e){/* 本機空間不足或瀏覽器停用儲存時，不影響雲端使用。 */}
-}
-const initialPublicCache=readCachedPublicData();
-function readRememberedIdentity(){
-  try{
-    const saved=JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'null');
-    if(!saved||typeof saved!=='object')return null;
-    return {name:String(saved.name||''),phone:String(saved.phone||'')};
-  }catch(e){return null}
-}
-function rememberIdentity(profile){
-  const previous=state.identity||{name:'',phone:''};
-  const next={
-    name:profile&&profile.name!==undefined?String(profile.name):String(previous.name||''),
-    phone:profile&&profile.phone!==undefined?String(profile.phone):String(previous.phone||'')
-  };
-  state.identity=next;
-  try{
-    if(next.name||next.phone)localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(next));
-    else localStorage.removeItem(PROFILE_STORAGE_KEY);
-  }catch(e){/* 無痕模式或瀏覽器停用儲存空間時，仍可正常填寫問卷。 */}
-  return next;
-}
-const state = {
-  publicData:initialPublicCache, surveys:initialPublicCache?initialPublicCache.surveys:[], hasLoadedPublic:false, cloudUnavailable:false, cloudMessage:'', admin:false, token:'', adminTab:'surveys',
-  activeSurvey:null, editingResponse:null, identity:readRememberedIdentity(), lookupSurveyId:'',
-  adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
-  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
-};
-let deferredInstallPrompt = null;
-const $ = id => document.getElementById(id);
-if ($('logoImage') && window.__JQ_LOGO_URL__) $('logoImage').src = window.__JQ_LOGO_URL__;
-// 管理者入口：在左上角 Logo 連續點擊五次，即可開啟管理者登入視窗。
-$('logoTap').addEventListener('click',()=>{
-  state.logoClicks++;
-  clearTimeout(state.logoTimer);
-  state.logoTimer=setTimeout(()=>{state.logoClicks=0;},1800);
-  if(state.logoClicks>=5){
-    state.logoClicks=0;
-    clearTimeout(state.logoTimer);
-    if(state.admin){loadAdmin();}else{adminLoginDialog();}
+const CFG = ${config};
+let appPort = null;
+function postToApp(payload, transfer) {
+  try {
+    window.top.postMessage(Object.assign({channel:CFG.channel, nonce:CFG.nonce}, payload), CFG.parentOrigin, transfer || []);
+  } catch (err) {
+    // 若傳送 MessagePort 失敗，改送可讀取的診斷訊息。
+    try { window.top.postMessage({channel:CFG.channel, nonce:CFG.nonce, type:'bridge_error', error:'無法建立跨框架 MessageChannel：' + (err && err.message ? err.message : String(err))}, CFG.parentOrigin); } catch (_) {}
   }
-});
-const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => '$' + Number(n || 0).toLocaleString('zh-TW',{maximumFractionDigits:2});
-const dateText = value => { if(!value)return ''; const d=new Date(value); return isNaN(d.getTime())?String(value):d.toLocaleString('zh-TW',{hour12:false}); };
-function toast(message){const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toast._timer);toast._timer=setTimeout(()=>el.classList.add('hidden'),3200)}
-function setBusy(on){document.body.classList.toggle('loading',!!on)}
-function showModal(html){$('modalRoot').innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`}
-function closeModal(){$('modalRoot').innerHTML=''}
-function setStatus(text,ok=true){
-  const el=$('syncStatus');if(!el)return;
-  el.textContent=text||'';
-  el.classList.toggle('error',!ok);
-  el.classList.toggle('syncing',!!text&&/(同步|確認|連線|讀取)/.test(text)&&ok);
-  el.onclick=ok?null:retryCloudConnection;
-  el.style.cursor=ok?'default':'pointer';
-  el.title=ok?'':'點擊重新連線';
 }
-
-function makeBridgeNonce(){
-  try{return Array.from(crypto.getRandomValues(new Uint8Array(18))).map(x=>x.toString(16).padStart(2,'0')).join('')}
-  catch(e){return 'jq'+Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+function sendResult(payload) {
+  if (!appPort) return;
+  try { appPort.postMessage(Object.assign({channel:CFG.channel, nonce:CFG.nonce}, payload)); }
+  catch (err) { /* 對方頁面已關閉時不再重試 */ }
 }
-function isTrustedGasOrigin(origin){
-  try{
-    const host=new URL(origin).hostname.toLowerCase();
-    // Apps Script HTML Service 的實際 sandbox host 常是 n-xxxx-0lu-script.googleusercontent.com，
-    // 注意它前面是連字號，不是 .script.googleusercontent.com。
-    return host==='script.google.com'||
-      host==='script.googleusercontent.com'||
-      host.endsWith('.script.googleusercontent.com')||
-      /^[a-z0-9-]+-script\.googleusercontent\.com$/.test(host);
-  }catch(e){return false}
+function onAppMessage(event) {
+  const data = event && event.data;
+  if (!data || data.channel !== CFG.channel || data.nonce !== CFG.nonce || data.type !== 'request') return;
+  const id = String(data.id || '');
+  const method = String(data.method || '');
+  const args = Array.isArray(data.args) ? data.args : [];
+  if (!id || id.length > 120) return;
+  const success = result => sendResult({type:'response', id:id, ok:true, result:result});
+  const failure = error => sendResult({type:'response', id:id, ok:false, error:(error && error.message) ? error.message : String(error)});
+  try {
+    if (!window.google || !google.script || !google.script.run) {
+      throw new Error('GAS HTML Service 執行環境未就緒。');
+    }
+    google.script.run.withSuccessHandler(success).withFailureHandler(failure).bridgeDispatch(method, args);
+  } catch (err) { failure(err); }
 }
-function setupBridge(){
-  if(!GAS_EXEC_URL || GAS_EXEC_URL.indexOf('https://script.google.com/macros/s/')!==0){
-    setStatus('待設定 API',false);renderBridgeSetup();return;
-  }
-  const frame=$('gasBridge');
-  const nonce=makeBridgeNonce();
-  state.bridgeNonce=nonce;
-
-  // 收到 GAS 內層 sandbox frame 傳來的 MessagePort 後，後續 API 全走該 Port。
-  // 這可避免 GitHub 只把訊息送到 GAS 外層 iframe、內層 userCodeAppPanel 收不到的巢狀 iframe 問題。
-  window.addEventListener('message',event=>{
-    if(!isTrustedGasOrigin(event.origin)||!event.data||event.data.channel!==CHANNEL||event.data.nonce!==nonce)return;
-    if(event.data.type==='ready'){
-      const port=event.ports&&event.ports[0];
-      if(!port){showCloudUnavailable('GAS 已載入，但沒有提供安全訊息通道。請確認 GAS 部署版本及存取權限。');return;}
-      if(state.bridgePort){try{state.bridgePort.close()}catch(e){}}
-      state.bridgePort=port;
-      state.bridgePort.onmessage=handleBridgePortMessage;
-      if(state.bridgePort.start)state.bridgePort.start();
-      if(state.bridgeReady)return;
-      state.bridgeReady=true;
-      setStatus('雲端通道已就緒，正在背景同步…');
-      loadPublic();
+function connectToApp(attempt) {
+  if (window.google && google.script && google.script.run && typeof MessageChannel !== 'undefined') {
+    try {
+      const channel = new MessageChannel();
+      appPort = channel.port1;
+      appPort.onmessage = onAppMessage;
+      if (appPort.start) appPort.start();
+      postToApp({type:'ready', version:CFG.version, transport:'MessageChannel'}, [channel.port2]);
+      return;
+    } catch (err) {
+      postToApp({type:'bridge_error', error:'建立 MessageChannel 失敗：' + (err && err.message ? err.message : String(err))});
       return;
     }
-    if(event.data.type==='bridge_error'){
-      showCloudUnavailable(event.data.error||'GAS 橋接頁未能啟動。請確認網路及 GAS 部署設定。');
-    }
-  });
-  frame.addEventListener('load',()=>{
-    if(!state.bridgeReady)setStatus('GAS 頁面已載入，正在建立安全通道…');
-  });
-  frame.addEventListener('error',()=>{
-    showCloudUnavailable('瀏覽器無法載入 GAS 橋接頁。請確認網路、部署權限及 GAS 網頁應用程式網址。');
-  });
-  const bridgeUrl=new URL(GAS_EXEC_URL);
-  bridgeUrl.searchParams.set('bridge','1');
-  bridgeUrl.searchParams.set('nonce',nonce);
-  frame.src=bridgeUrl.toString();
-
-  setTimeout(()=>{
-    if(!state.bridgeReady){
-      showCloudUnavailable('雲端安全通道尚未建立（25 秒未收到回應）。目前仍可查看本機保存的問卷清單，請稍後重新連線。');
-    }
-  },25000);
-}
-function handleBridgePortMessage(event){
-  const data=event&&event.data;
-  if(!data||data.channel!==CHANNEL||data.nonce!==state.bridgeNonce)return;
-  if(data.type==='response'){
-    const pending=state.bridgePending.get(data.id);if(!pending)return;
-    clearTimeout(pending.timer);state.bridgePending.delete(data.id);
-    if(data.ok)pending.resolve(data.result);else pending.reject(new Error(data.error||'雲端服務發生錯誤'));
   }
-}
-function api(method,...args){
-  return new Promise((resolve,reject)=>{
-    if(!state.bridgeReady||!state.bridgePort){reject(new Error('雲端連線尚未就緒，請稍候或重新整理。'));return;}
-    const id='r'+(++state.requestNo)+'_'+Date.now();
-    const timer=setTimeout(()=>{state.bridgePending.delete(id);reject(new Error('雲端回應逾時，請稍後再試。'));},45000);
-    state.bridgePending.set(id,{resolve,reject,timer});
-    try{
-      state.bridgePort.postMessage({channel:CHANNEL,nonce:state.bridgeNonce,type:'request',id,method,args});
-    }catch(err){
-      clearTimeout(timer);state.bridgePending.delete(id);reject(err);
-    }
-  });
-}
-
-function isRunningStandalone(){
-  const modes=['standalone','minimal-ui','fullscreen'];
-  return modes.some(mode=>window.matchMedia&&window.matchMedia(`(display-mode: ${mode})`).matches)
-    || window.navigator.standalone===true;
-}
-function hideInstallButton(){
-  const strip=$('installStrip');
-  const btn=$('installBtn');
-  if(strip)strip.hidden=true;
-  if(btn)btn.hidden=true;
-}
-function showInstallButton(){
-  const strip=$('installStrip');
-  const btn=$('installBtn');
-  if(strip)strip.hidden=false;
-  if(btn)btn.hidden=false;
-}
-async function installApp(){
-  if(isRunningStandalone()){
-    hideInstallButton();
-    toast('真好點已經安裝在這台裝置上了。');
+  if (attempt < 60) {
+    setTimeout(function(){ connectToApp(attempt + 1); }, 100);
     return;
   }
-  if(deferredInstallPrompt){
-    const promptEvent=deferredInstallPrompt;
-    deferredInstallPrompt=null;
-    try{
-      await promptEvent.prompt();
-      const choice=await promptEvent.userChoice;
-      if(choice&&choice.outcome==='accepted'){
-        toast('已接受安裝，請完成系統安裝步驟。');
-      }else{
-        const btn=$('installBtn');
-        if(btn)btn.textContent='📲 安裝為 APP';
-      }
-    }catch(err){
-      console.warn('PWA 安裝視窗未能開啟：',err);
-      toast('目前無法開啟安裝視窗，請稍後再試。');
-    }
-    return;
-  }
-  showModal(`<h3>真好點安裝為 APP</h3><p>Chrome 目前尚未提供真正的應用程式安裝提示。</p><div class="notice">請確認使用 Android Chrome，並保持網頁開啟一段時間、至少點擊操作一次。若右上角選單出現「安裝應用程式」，可使用該選項。<br><br><strong>請不要選擇「新增至主畫面」來代替安裝</strong>，那可能只會建立帶有 Chrome 標誌的網頁捷徑。</div><p class="tiny muted">當瀏覽器確認符合 PWA 安裝條件後，這個按鈕會直接開啟系統安裝視窗。</p><button class="btn btn-primary btn-block" onclick="closeModal()">知道了</button>`);
+  postToApp({type:'bridge_error', error:'GAS HTML Service 或 MessageChannel 未能在期限內就緒。請確認部署版本及瀏覽器支援。'});
 }
-function initPwaInstall(){
-  const btn=$('installBtn');
-  if(!btn)return;
-  btn.textContent='📲 安裝為 APP';
-  btn.addEventListener('click',installApp);
-
-  // CSS 會先隱藏已安裝 App 的按鈕；此處再補 Safari/iOS 的 standalone 判斷。
-  if(isRunningStandalone()){
-    hideInstallButton();
-    return;
-  }
-
-  window.addEventListener('beforeinstallprompt',event=>{
-    event.preventDefault();
-    deferredInstallPrompt=event;
-    btn.textContent='📲 立即安裝 APP';
-    showInstallButton();
-  });
-
-  window.addEventListener('appinstalled',()=>{
-    deferredInstallPrompt=null;
-    hideInstallButton();
-    toast('真好點已成功安裝！');
-  });
-
-  document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&isRunningStandalone())hideInstallButton();
-  });
-}
-function renderBridgeSetup(){
-  $('main').innerHTML=`<section class="hero"><h2>歡迎使用真好點問卷系統</h2><p>同一個網址管理多份問卷，問卷結果集中保存於 Google 試算表。</p></section><section class="card"><h3>尚未設定 GAS 連線網址</h3><div class="notice">請先完成 GAS 部署，再將產生的網頁應用程式 /exec 網址填入 index.html 最上方的 GAS_EXEC_URL，提交 GitHub 後重新整理本頁。</div><p class="small muted">這個 GitHub Pages 網址是管理者與使用者共用的正式入口；GAS /exec 只在背景作為資料服務。</p></section>`;
-}
-function renderError(message){$('main').innerHTML=`<section class="hero"><h2>雲端連線暫時中斷</h2><p>請確認網路及 GAS 部署設定。</p></section><div class="card"><div class="notice error">${esc(message)}</div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="loadPublic()">重新連線</button></div>`}
-
-function retryCloudConnection(){
-  if(state.bridgeReady&&state.bridgePort){loadPublic();return;}
-  // 安全通道尚未建立時，重新載入頁面會重新建立 nonce 與 MessageChannel。
-  window.location.reload();
-}
-function showCloudUnavailable(message){
-  state.cloudUnavailable=true;
-  state.cloudMessage=String(message||'雲端資料暫時無法讀取。');
-  setStatus(state.publicData?'暫時無法同步，先顯示上次資料':'雲端連線暫時中斷',false);
-  // 有快取時絕不以錯誤頁蓋掉已顯示的首頁；沒有快取時也保留正常首頁框架。
-  if(!state.publicData&&!state.admin)renderHome();
-}
-function renderStartupScreen(){
-  // 啟動時先同步讀取本機快取，讓畫面不必等待 GAS iframe 與雲端試算表。
-  renderHome();
-  setStatus(state.publicData?'已載入本機問卷清單，正在背景確認雲端…':'正在背景連接雲端並讀取問卷…');
-}
-async function loadPublic(){
-  // 首頁的雲端確認不鎖定畫面，也不降低頁面互動性。
-  state.cloudUnavailable=false;state.cloudMessage='';
-  setStatus(state.publicData?'正在背景同步雲端資料…':'正在背景讀取雲端問卷…');
-  try{
-    const data=await api('getPublicData');
-    if(!data||!Array.isArray(data.surveys))throw new Error('雲端回傳的問卷清單格式不正確。');
-    state.publicData=data;state.surveys=data.surveys;state.hasLoadedPublic=true;
-    state.cloudUnavailable=false;state.cloudMessage='';
-    writeCachedPublicData(data);
-    setStatus('雲端資料已同步');
-    if(!state.admin&&!$('questionForm'))renderHome();
-  }catch(err){
-    showCloudUnavailable(err.message);
-  }
-}
-function renderHome(){
-  const open=state.surveys.filter(s=>s.status==='開放中');
-  const hasAnySurvey=state.surveys.length>0;
-  const emptyMessage=!state.hasLoadedPublic
-    ? '正在背景確認雲端問卷資料，確認完成後會自動更新。'
-    : hasAnySurvey
-      ? '目前沒有問卷進行中，請稍後再來。所有已結束問卷仍可在下方查詢自己的回覆。'
-      : '目前沒有問卷進行中，管理者建立並開放問卷後，這裡就會自動顯示。';
-  const cloudNotice=state.cloudUnavailable
-    ? `<div class="notice error" style="margin-bottom:12px">${esc(state.cloudMessage||'雲端資料暫時無法讀取。')}${state.publicData?'<br>目前先顯示這台裝置上次保存的問卷清單。':''}<button class="btn btn-secondary btn-block" style="margin-top:9px" onclick="retryCloudConnection()">重新連線並同步</button></div>`
-    : (!state.publicData&&!state.hasLoadedPublic?'<div class="notice" style="margin-bottom:12px">首次載入正在背景確認雲端資料，首頁已先開啟，不需要停留在載入畫面。</div>':'');
-  $('main').innerHTML=`${cloudNotice}<section class="hero"><h2>每一份回答，都值得好好收集！</h2><p>選擇下方開放中的問卷開始填寫。不同活動、團購或調查，可以同時進行。</p></section>
-    <section class="card"><div class="section-title"><span class="emoji">📝</span><h3>目前開放中的問卷</h3><span class="badge">${open.length} 份</span></div>
-      ${open.length?`<div class="survey-grid">${open.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.description||'歡迎填寫本問卷')}</div></div><span class="badge">開放中</span></div><div class="survey-meta">建立時間：${esc(dateText(s.createdAt))}</div><div class="btn-row"><button class="btn btn-primary" onclick="openSurvey('${esc(s.id)}')">開始填寫</button><button class="btn btn-plain" onclick="openLookup('${esc(s.id)}')">查詢回覆</button></div></div>`).join('')}</div>`:`<div class="notice"><strong>目前沒有問卷進行中……</strong><br>${esc(emptyMessage)}</div>`}
-    </section>
-    <section class="card"><div class="section-title"><span class="emoji">🔎</span><h3>查詢以前的回覆</h3></div><p class="small muted">問卷結束後仍可查詢自己的回覆。必須輸入填寫時相同的姓名及電話，系統不會顯示其他人的資料。</p>
-      ${hasAnySurvey?`<div class="field"><label>選擇問卷</label><select id="lookupSurveySelect" class="select">${state.surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title)}（${esc(s.status)}）</option>`).join('')}</select></div><button class="btn btn-secondary btn-block" onclick="openLookup($('lookupSurveySelect').value)">查詢我的回覆</button>`:state.hasLoadedPublic?'<div class="notice">目前尚未建立任何問卷，暫時沒有可查詢的回覆。</div>':state.cloudUnavailable?'<div class="notice">目前無法取得問卷清單，請重新連線後再查詢。</div>':'<div class="notice">正在背景確認可查詢的問卷清單…</div>'}
-    </section>`;
-}
-async function openSurvey(id,existing){
-  try{setBusy(true);const result=await api('getPublicSurvey',id);state.activeSurvey=result.survey;state.editingResponse=existing||null;renderSurveyForm(existing?existing.answers:null);}
-  catch(err){toast(err.message)}finally{setBusy(false)}
-}
-function renderQuestion(q,answers){
-  const required=q.required?'<span class="required">必填</span>':'<span class="optional">選填</span>';
-  const answer=answers?answers[q.id]:null;
-  let body='';
-  if(q.type==='text')body=`<input class="input" data-answer="text" maxlength="3000" value="${esc(answer||'')}" placeholder="請輸入${esc(q.label)}">`;
-  else if(q.type==='textarea')body=`<textarea class="textarea" data-answer="textarea" maxlength="3000" placeholder="請輸入${esc(q.label)}">${esc(answer||'')}</textarea>`;
-  else if(q.type==='date')body=`<input class="input" type="date" data-answer="date" value="${esc(answer||'')}">`;
-  else if(q.type==='number')body=`<input class="input" type="number" step="any" data-answer="number" value="${answer==null?'':esc(answer)}" placeholder="請輸入數字">`;
-  else if(q.type==='rating')body=`<div class="option-list">${[1,2,3,4,5].map(n=>`<label class="option"><input type="radio" name="rating_${esc(q.id)}" value="${n}" ${Number(answer)===n?'checked':''}><span class="option-name">${'★'.repeat(n)}${'☆'.repeat(5-n)}</span><b>${n} 分</b></label>`).join('')}</div>`;
-  else if(q.type==='single'||q.type==='multi')body=`<div class="option-list">${(q.options||[]).map(o=>{const checked=q.type==='single'?answer===o.id:Array.isArray(answer)&&answer.includes(o.id);return `<label class="option"><input type="${q.type==='single'?'radio':'checkbox'}" name="${q.type}_${esc(q.id)}" value="${esc(o.id)}" ${checked?'checked':''}><span class="option-name">${esc(o.label)}</span>${Number(o.price||0)?`<span class="price">${money(o.price)}</span>`:''}</label>`}).join('')}</div>`;
-  else if(q.type==='dropdown')body=`<select class="select" data-answer="dropdown"><option value="">請選擇</option>${(q.options||[]).map(o=>`<option value="${esc(o.id)}" ${answer===o.id?'selected':''}>${esc(o.label)}${Number(o.price||0)?'（'+money(o.price)+'）':''}</option>`).join('')}</select>`;
-  else if(q.type==='items' && (q.itemMode==='product'||q.basePrice!==undefined)){
-    const a=answer&&typeof answer==='object'&&!Array.isArray(answer)?answer:{};
-    const productQty=Math.max(0,Number(a.productQty||0));
-    const custom=a.customizations||[];
-    body=`<div class="product-qty-panel" data-item-mode="product">
-      <div class="product-price-line"><span>商品單價</span><strong>${money(q.basePrice||0)}／份</strong></div>
-      <div class="qty-row" style="justify-content:space-between;align-items:center"><div><b>訂購數量</b><div class="tiny muted">最多 ${Number(q.maxQty||20)} 份</div></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||20)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||20)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||20)})">＋</button></div></div>
-      ${(q.options||[]).length?`<div class="customization-list"><h4>客製化／加購選項</h4>${(q.options||[]).map(o=>{const item=custom.find(x=>x.optionId===o.id);const qty=item?Number(item.qty||0):0;const max=Number(o.maxQty||5);return `<div class="customization-row"><div class="customization-info"><strong>${esc(o.label)}</strong><span class="tiny muted">${money(o.price||0)}／份・最多 ${max} 份</span></div><div class="qty-control compact"><button type="button" aria-label="減少${esc(o.label)}數量" onclick="adjustQty(this,-1,${max})" ${productQty<=0||qty<=0?'disabled':''}>－</button><input class="qty-value" data-qty-role="custom" data-option-id="${esc(o.id)}" type="number" inputmode="numeric" min="0" max="${max}" value="${qty}" oninput="handleQtyInput(this)" ${productQty<=0?'disabled':''}><button type="button" aria-label="增加${esc(o.label)}數量" onclick="adjustQty(this,1,${max})" ${productQty<=0||qty>=max?'disabled':''}>＋</button></div></div>`}).join('')}</div>`:'<p class="tiny muted">此商品沒有額外客製化選項。</p>'}
-      ${q.allowNote!==false?`<textarea class="textarea item-product-note" data-item-note maxlength="300" placeholder="商品備註（選填，例如不要香菜）">${esc(a.note||'')}</textarea>`:''}
-    </div>`;
-  }
-  else if(q.type==='items')body=`<div class="option-list">${(q.options||[]).map(o=>{const chosen=Array.isArray(answer)?answer.find(x=>x.optionId===o.id):null;return `<div class="option item-option"><input type="checkbox" class="item-check" value="${esc(o.id)}" ${chosen?'checked':''}><div style="flex:1;min-width:0"><div class="option-name">${esc(o.label)} ${Number(o.price||0)?`<span class="price">${money(o.price)}</span>`:''}</div><div class="qty-row"><span class="tiny muted">數量</span><input class="qty item-qty" type="number" min="1" max="${Number(q.maxQty||20)}" value="${chosen?Number(chosen.qty||1):1}"><input class="input note-input item-note" style="flex:1;min-width:110px;min-height:36px;padding:7px 9px" maxlength="300" placeholder="備註（選填）" value="${esc(chosen?chosen.note||'':'')}"></div></div></div>`}).join('')}</div>`;
-  return `<div class="field question-box" data-qid="${esc(q.id)}" data-type="${esc(q.type)}" data-item-mode="${esc(q.itemMode||(q.basePrice!==undefined?'product':'legacy'))}"><label>${esc(q.label)}${required}</label>${body}</div>`;
-}
-
-
-function renderSurveyForm(initialAnswers){
-  const s=state.activeSurvey;if(!s)return;
-  const editing=!!state.editingResponse;
-  const profile=state.identity||{};
-  $('main').innerHTML=`<button class="back" onclick="renderHome()">← 返回問卷列表</button><section class="hero"><h2>${esc(s.title)}</h2><p>${esc(s.description||'請依照題目填寫資料。')}</p></section>
-    ${s.status!=='開放中'?'<div class="notice">這份問卷已結束，只能查詢自己的回覆。</div>':''}
-    <section class="card"><h3>填寫者資料</h3><div class="form-grid"><div class="field"><label>姓名<span class="required">必填</span></label><input id="profileName" class="input" maxlength="60" value="${esc(profile.name||'')}" placeholder="請輸入姓名"></div><div class="field"><label>手機／聯絡電話<span class="required">必填</span></label><input id="profilePhone" class="input" inputmode="tel" maxlength="20" value="${esc(profile.phone||'')}" placeholder="請輸入電話"></div></div><p class="tiny muted">姓名與電話用於查詢及核對自己的回覆；試算表只顯示電話末四碼。</p></section>
-    <section class="card"><h3>問卷內容</h3><div id="questionForm">${s.questions.map(q=>renderQuestion(q,initialAnswers)).join('')}</div><div class="total-box"><span>本次金額（如有價格題目）</span><strong id="liveTotal">$0</strong></div>
-      ${s.status==='開放中'?`<button class="btn btn-primary btn-block" onclick="submitCurrentSurvey()">${editing?'儲存修改':'確認並送出'}</button>`:''}
-      <button class="btn btn-secondary btn-block" style="margin-top:8px" onclick="openLookup('${esc(s.id)}')">查詢我的回覆</button>
-    </section>`;
-  // 姓名與電話在輸入時即保存到本機瀏覽器，下次開啟問卷或查詢時自動帶入。
-  const saveProfileFields=()=>rememberIdentity({name:$('profileName')?.value||'',phone:$('profilePhone')?.value||''});
-  $('profileName').addEventListener('input',saveProfileFields);
-  $('profilePhone').addEventListener('input',saveProfileFields);
-  document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);
-  updateLiveTotal();
-  $('questionForm').addEventListener('change',()=>{document.querySelectorAll('#questionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability);updateLiveTotal();});
-  $('questionForm').addEventListener('input',updateLiveTotal);
-}
-
-
-function collectAnswersFrom(rootSelector){
-  const out={};
-  document.querySelectorAll(`${rootSelector} .question-box`).forEach(box=>{
-    const id=box.dataset.qid,type=box.dataset.type;
-    if(type==='text'||type==='textarea'||type==='date'||type==='number'){const el=box.querySelector('[data-answer]');out[id]=el?el.value:'';}
-    else if(type==='rating'){const x=box.querySelector('input:checked');out[id]=x?Number(x.value):'';}
-    else if(type==='single'){const x=box.querySelector('input:checked');out[id]=x?x.value:'';}
-    else if(type==='multi'){out[id]=Array.from(box.querySelectorAll('input:checked')).map(x=>x.value);}
-    else if(type==='dropdown'){const x=box.querySelector('[data-answer]');out[id]=x?x.value:'';}
-    else if(type==='items'&&box.dataset.itemMode==='product'){
-      const productQty=Math.max(0,Number(box.querySelector('[data-qty-role="product"]')?.value||0));
-      const customizations=Array.from(box.querySelectorAll('[data-qty-role="custom"]')).map(el=>({optionId:el.dataset.optionId,qty:Math.max(0,Number(el.value||0))})).filter(x=>x.qty>0);
-      const note=box.querySelector('[data-item-note]')?.value.trim()||'';
-      out[id]={productQty:productQty,customizations:customizations,note:note};
-    }
-    else if(type==='items'){
-      out[id]=Array.from(box.querySelectorAll('.item-option')).filter(el=>el.querySelector('.item-check').checked).map(el=>({optionId:el.querySelector('.item-check').value,qty:Number(el.querySelector('.item-qty').value)||1,note:el.querySelector('.item-note').value.trim()}));
-    }
-  });
-  return out;
-}
-function collectAnswers(){return collectAnswersFrom('#questionForm')}
-function adjustQty(button,delta,max){
-  const control=button.closest('.qty-control');if(!control)return;
-  const input=control.querySelector('.qty-value');if(!input||input.disabled)return;
-  const next=Math.max(0,Math.min(Number(max||99),Math.floor(Number(input.value||0))+delta));
-  input.value=String(next);
-  input.dispatchEvent(new Event('input',{bubbles:true}));
-}
-function handleQtyInput(input){
-  const max=Number(input.max||99);let value=Number(input.value);
-  if(!Number.isFinite(value)||value<0)value=0;
-  value=Math.min(max,Math.floor(value));input.value=String(value);
-  const box=input.closest('.question-box');
-  if(box&&input.dataset.qtyRole==='product')syncProductOptionAvailability(box);
-  updateLiveTotal();
-}
-function syncProductOptionAvailability(box){
-  if(!box)return;
-  const productQty=Number(box.querySelector('[data-qty-role="product"]')?.value||0);
-  box.querySelectorAll('[data-qty-role="custom"]').forEach(input=>{
-    const control=input.closest('.qty-control');
-    const buttons=control?control.querySelectorAll('button'):[];
-    if(productQty<=0){input.value='0';input.disabled=true;buttons.forEach(b=>b.disabled=true);}
-    else{input.disabled=false;buttons.forEach(b=>b.disabled=false);const max=Number(input.max||5);input.value=String(Math.min(max,Math.max(0,Number(input.value||0))));if(buttons[0])buttons[0].disabled=Number(input.value)<=0;if(buttons[1])buttons[1].disabled=Number(input.value)>=max;}
-  });
-}
-function currentAmount(){
-  if(!state.activeSurvey)return 0;
-  const answers=collectAnswers();let sum=0;
-  state.activeSurvey.questions.forEach(q=>{
-    const a=answers[q.id];
-    if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);if(o)sum+=Number(o.price||0);}
-    else if(q.type==='multi'&&Array.isArray(a)){a.forEach(id=>{const o=(q.options||[]).find(x=>x.id===id);if(o)sum+=Number(o.price||0);});}
-    else if(q.type==='items'&&q.itemMode==='product'&&a&&!Array.isArray(a)){
-      sum+=Number(q.basePrice||0)*Number(a.productQty||0);
-      (a.customizations||[]).forEach(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);if(o)sum+=Number(o.price||0)*Number(x.qty||0);});
-    }
-    else if(q.type==='items'&&Array.isArray(a)){a.forEach(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);if(o)sum+=Number(o.price||0)*Number(x.qty||1);});}
-  });
-  return sum;
-}
-function updateLiveTotal(){const el=$('liveTotal');if(el)el.textContent=money(currentAmount())}
-
-
-async function submitCurrentSurvey(){
-  const profile={name:$('profileName').value.trim(),phone:$('profilePhone').value.trim()};
-  rememberIdentity(profile);
-  if(!profile.name||!profile.phone){toast('請填寫姓名及電話');return;}
-  const answers=collectAnswers();
-  const total=currentAmount();
-  const isEdit=!!state.editingResponse;
-  if(!confirm(`${isEdit?'確認儲存修改':'確認送出問卷'}？\n姓名：${profile.name}\n金額：${money(total)}`))return;
-  setBusy(true);
-  try{
-    let result;
-    if(isEdit)result=await api('editMyResponse',state.activeSurvey.id,profile,state.editingResponse.responseId,answers);
-    else result=await api('submitResponse',state.activeSurvey.id,profile,answers);
-    if(result.duplicate){rememberIdentity(profile);toast(result.message);openLookup(state.activeSurvey.id);return;}
-    if(!result.ok)throw new Error(result.message||'送出失敗');
-    rememberIdentity(profile);state.editingResponse=null;
-    const filled=renderFilledAnswersHtml(state.activeSurvey,answers);
-    showModal(`<div style="text-align:center"><div style="font-size:50px">🎉</div><h3>${isEdit?'修改完成':'送出成功！'}</h3><p class="muted small">${esc(result.message||'資料已安全寫入雲端。')}</p><div class="notice success">回覆編號：<b>${esc(result.responseId||'已更新')}</b><br>金額：<b>${money(result.amount==null?total:result.amount)}</b></div><div class="order-card" style="text-align:left;margin-top:12px"><b>本次填寫明細</b>${filled}</div><button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();loadPublic()">完成</button></div>`);
-  }catch(err){toast(err.message)}finally{setBusy(false)}
-}
-
-
-function openLookup(surveyId){
-  if(!surveyId){toast('請先選擇問卷');return}
-  state.lookupSurveyId=surveyId;
-  const remembered=state.identity||{};
-  showModal(`<h3>查詢我的回覆</h3><p class="small muted">請輸入填寫時使用的姓名及電話，兩者必須一致。</p><div class="field"><label>姓名</label><input id="lookupName" class="input" maxlength="60" value="${esc(remembered.name||'')}" placeholder="請輸入姓名"></div><div class="field"><label>手機／聯絡電話</label><input id="lookupPhone" class="input" inputmode="tel" maxlength="20" value="${esc(remembered.phone||'')}" placeholder="請輸入電話"></div><div id="lookupResult"></div><div class="btn-row"><button class="btn btn-primary" onclick="doLookup()">查詢</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);
-  const saveLookupFields=()=>rememberIdentity({name:$('lookupName')?.value||'',phone:$('lookupPhone')?.value||''});
-  $('lookupName').addEventListener('input',saveLookupFields);
-  $('lookupPhone').addEventListener('input',saveLookupFields);
-}
-async function doLookup(){
-  const profile={name:$('lookupName').value.trim(),phone:$('lookupPhone').value.trim()};
-  rememberIdentity(profile);
-  if(!profile.name||!profile.phone){toast('請輸入姓名及電話');return;}
-  setBusy(true);
-  try{
-    const r=await api('lookupMyResponse',state.lookupSurveyId,profile);
-    if(!r.found){$('lookupResult').innerHTML=`<div class="notice error">${esc(r.message||'查無資料')}</div>`;return;}
-    rememberIdentity(profile);
-    const surveyData=await api('getPublicSurvey',state.lookupSurveyId);state.activeSurvey=surveyData.survey;
-    state.editingResponse=r.response;
-    const s=state.activeSurvey,resp=r.response;
-    $('lookupResult').innerHTML=`<div class="notice success">已找到你的回覆。<br>回覆編號：<b>${esc(resp.responseId)}</b><br>填寫時間：${esc(dateText(resp.submittedAt))}<br>金額：<b>${money(resp.amount)}</b></div><div class="order-card">${renderFilledAnswersHtml(s,resp.answers)}</div>${r.canEdit?'<button class="btn btn-primary btn-block" onclick="closeModal();openSurveyForEdit()">修改我的回覆</button>':'<div class="notice">這份問卷已結束或已停止修改，目前只能查看。</div>'}`;
-  }catch(err){$('lookupResult').innerHTML=`<div class="notice error">${esc(err.message)}</div>`}finally{setBusy(false)}
-}
-
-
-function openSurveyForEdit(){const saved=state.editingResponse;renderSurveyForm(saved?saved.answers:null)}
-function formatAnswerForUi(q,a){
-  if(a===undefined||a===null||a==='')return '';
-  if(q.type==='text'||q.type==='textarea'||q.type==='date')return String(a).trim();
-  if(q.type==='number')return String(a);
-  if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);return o?o.label+(Number(o.price||0)?'（'+money(o.price)+'）':''):'';}
-  if(q.type==='multi')return (Array.isArray(a)?a:[]).map(id=>(q.options||[]).find(x=>x.id===id)).filter(Boolean).map(o=>o.label+(Number(o.price||0)?'（'+money(o.price)+'）':'')).join('、');
-  if(q.type==='items'&&(q.itemMode==='product'||q.basePrice!==undefined||(a&&typeof a==='object'&&!Array.isArray(a)))){
-    const obj=a&&typeof a==='object'?a:{};const qty=Number(obj.productQty||0);const parts=[];
-    if(qty>0){const price=Number(q.basePrice||0);parts.push(`商品數量：${qty} 份 × ${money(price)} = ${money(qty*price)}`);}
-    (Array.isArray(obj.customizations)?obj.customizations:[]).forEach(item=>{const o=(q.options||[]).find(x=>x.id===item.optionId);const n=Number(item.qty||0);if(o&&n>0){const subtotal=Number(o.price||0)*n;parts.push(`${o.label}：${n} 份（${money(o.price||0)}／份，小計 ${money(subtotal)}）`);}});
-    if(obj.note)parts.push('備註：'+String(obj.note).trim());
-    return parts.join('；');
-  }
-  if(q.type==='items')return (Array.isArray(a)?a:[]).map(x=>{const o=(q.options||[]).find(y=>y.id===x.optionId);return (o?o.label:x.optionId)+' × '+x.qty+(o&&Number(o.price||0)?'（'+money(o.price)+'/份）':'')+(x.note?'（'+x.note+'）':'');}).join('；');
-  if(q.type==='rating')return a===''?'':String(a)+' 分';
-  return String(a).trim();
-}
-function renderFilledAnswersHtml(survey,answers){
-  const rows=(survey.questions||[]).map(q=>({q:q,text:formatAnswerForUi(q,answers?answers[q.id]:undefined)})).filter(x=>x.text!==''&&x.text!=null);
-  if(!rows.length)return '<p class="tiny muted">沒有其他填寫內容。</p>';
-  return rows.map(x=>`<div class="answer-line"><b>${esc(x.q.label)}</b><br>${esc(x.text)}</div>`).join('');
-}
-
-
-function adminLoginDialog(){showModal(`<h3>管理者登入</h3><p class="small muted">請輸入管理者密碼以進入問卷管理。</p><div class="field"><label>管理者密碼</label><input id="adminPassword" class="input" type="password" autocomplete="current-password" placeholder="請輸入密碼"></div><div id="loginError"></div><div class="btn-row"><button class="btn btn-primary" onclick="doAdminLogin()">登入</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);$('adminPassword').addEventListener('keydown',e=>{if(e.key==='Enter')doAdminLogin()})}
-async function doAdminLogin(){setBusy(true);try{const r=await api('loginAdmin',$('adminPassword').value);if(!r.ok){$('loginError').innerHTML=`<div class="notice error">${esc(r.message)}</div>`;return}state.token=r.token;state.admin=true;closeModal();await loadAdmin()}catch(err){$('loginError').innerHTML=`<div class="notice error">${esc(err.message)}</div>`}finally{setBusy(false)}}
-async function loadAdmin(){try{state.adminOverview=await api('getAdminOverview',state.token);state.adminTab='surveys';renderAdmin()}catch(err){toast(err.message);if(/逾期|重新登入/.test(err.message)){state.admin=false;state.token='';renderHome()}}}
-function renderAdmin(){
-  setStatus('管理者模式');
-  const tabs=[['surveys','問卷管理'],['builder','設計問卷'],['backup','雲端備份'],['security','密碼設定']];
-  $('main').innerHTML=`<section class="hero"><h2>問卷管理中心</h2><p>管理多份同時進行的問卷，查看回覆及保護雲端資料。</p></section><div class="admin-tabs">${tabs.map(t=>`<button class="tab ${state.adminTab===t[0]?'active':''}" onclick="setAdminTab('${t[0]}')">${t[1]}</button>`).join('')}<button class="tab" onclick="exitAdmin()">退出管理</button></div><div id="adminContent"></div>`;
-  if(state.adminTab==='surveys')renderAdminSurveys();else if(state.adminTab==='builder')renderBuilder();else if(state.adminTab==='backup')renderBackup();else renderSecurity();
-}
-function setAdminTab(tab){state.adminTab=tab;renderAdmin()}
-function exitAdmin(){state.admin=false;state.token='';state.adminSurvey=null;setStatus('雲端已連線');loadPublic()}
-function renderAdminSurveys(){
-  const list=(state.adminOverview&&state.adminOverview.surveys)||[];
-  const open=list.filter(s=>s.status==='開放中').length;
-  const count=list.reduce((n,s)=>n+s.responseCount,0);
-  $('adminContent').innerHTML=`<div class="card"><div class="stat-grid"><div class="stat"><b>${list.length}</b><span>問卷總數</span></div><div class="stat"><b>${open}</b><span>開放中</span></div><div class="stat"><b>${count}</b><span>回覆總數</span></div></div><div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="newSurvey()">＋ 建立新問卷</button><a class="btn btn-plain" href="${esc((state.adminOverview.settings||{}).resultSpreadsheetUrl||'#')}" target="_blank" style="text-align:center;text-decoration:none">開啟結果試算表</a></div></div>
-  <div class="card"><h3>所有問卷</h3>${list.length?list.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.sheetName)} ・ ${s.responseCount} 份回覆 ・ 金額 ${money(s.totalAmount)}</div></div><span class="badge ${s.status==='開放中'?'':s.status==='已結束'?'closed':'draft'}">${esc(s.status)}</span></div><div class="survey-meta">建立：${esc(dateText(s.createdAt))}${s.closedAt?' ・ 結束：'+esc(dateText(s.closedAt)):''}</div><div class="btn-row"><button class="btn btn-secondary" onclick="editSurvey('${esc(s.id)}')">編輯問卷</button><button class="btn btn-blue" onclick="viewResponses('${esc(s.id)}')">查看回覆</button></div><div class="btn-row" style="margin-top:7px"><button class="btn ${s.status==='開放中'?'btn-danger':'btn-green'}" onclick="toggleSurveyStatus('${esc(s.id)}','${esc(s.status)}')">${s.status==='開放中'?'結束問卷':s.status==='已結束'?'重新開放':'開放問卷'}</button><button class="btn btn-plain" onclick="copySurvey('${esc(s.id)}')">複製問卷</button><a class="btn btn-plain" href="${esc(s.spreadsheetUrl)}" target="_blank" style="text-decoration:none;text-align:center">開啟工作表</a></div></div>`).join(''):'<div class="notice">尚未建立問卷，請按上方按鈕建立第一份。</div>'}</div>`;
-}
-
-
-function newQuestion(type='text'){
-  const q={id:'q'+Math.random().toString(36).slice(2,10),label:'',type:type,required:false,maxQty:20,options:[]};
-  if(type==='items'){q.itemMode='product';q.basePrice=0;q.allowNote=true;q.options=[];}
-  else if(['single','multi','dropdown'].includes(type))q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
-  return q;
-}
-
-
-function blankSurvey(){return {title:'',description:'',allowEdit:true,questions:[newQuestion('text')]}}
-function newSurvey(){state.editSurveyId='';state.editDraft=blankSurvey();renderBuilder()}
-async function editSurvey(id){setBusy(true);try{const r=await api('getPublicSurvey',id);state.editSurveyId=id;state.editDraft=JSON.parse(JSON.stringify(r.survey));renderBuilder()}catch(err){toast(err.message)}finally{setBusy(false)}}
-function renderBuilder(){
-  const s=state.editDraft||blankSurvey();
-  $('adminContent').innerHTML=`<div class="card"><div class="section-title"><span class="emoji">🧩</span><h3>${state.editSurveyId?'編輯問卷':'設計新問卷'}</h3></div><div class="field"><label>問卷標題 *</label><input id="builderTitle" class="input" maxlength="120" value="${esc(s.title)}" placeholder="例如：員工旅遊報名調查"></div><div class="field"><label>問卷說明</label><textarea id="builderDescription" class="textarea" maxlength="1000" placeholder="填寫說明、截止日期等">${esc(s.description||'')}</textarea></div><label class="checkline"><input type="checkbox" id="builderAllowEdit" ${s.allowEdit!==false?'checked':''}> 使用者送出後，在問卷開放期間允許自行修改</label><div class="divider"></div><div class="order-top"><h3 style="margin:0">問卷題目</h3><span class="tiny muted">每題可設定必填或選填</span></div><div id="questionEditors">${s.questions.map((q,i)=>questionEditorHtml(q,i)).join('')}</div><div class="field"><label>新增題目類型</label><div class="editor-grid"><select id="newQuestionType" class="select"><option value="text">簡答題</option><option value="textarea">段落文字</option><option value="single">單選題</option><option value="multi">多選題</option><option value="dropdown">下拉選單</option><option value="date">日期題</option><option value="number">數字題</option><option value="rating">1～5 分評分</option><option value="items">商品／數量題</option></select><button class="btn btn-secondary" onclick="addQuestion()">＋ 新增題目</button></div></div><div class="btn-row"><button class="btn btn-primary" onclick="saveBuilder()">${state.editSurveyId?'儲存問卷修改':'建立並開放問卷'}</button><button class="btn btn-plain" onclick="setAdminTab('surveys')">返回問卷管理</button></div></div>`;
-}
-function questionEditorHtml(q,index){
-  const typeOptions=[['text','簡答題'],['textarea','段落文字'],['single','單選題'],['multi','多選題'],['dropdown','下拉選單'],['date','日期題'],['number','數字題'],['rating','1～5 分評分'],['items','商品／數量題']];
-  const mode=q.itemMode||(q.basePrice!==undefined?'product':'legacy');
-  const itemProduct=q.type==='items'&&mode==='product';
-  const itemLegacy=q.type==='items'&&mode!=='product';
-  let extra='';
-  if(itemProduct){
-    extra=`<div class="field product-base-price-field"><label>商品單價（元）</label><input class="input qe-base-price" type="number" min="0" max="10000000" step="any" inputmode="decimal" value="${Number(q.basePrice??0)}" placeholder="請輸入商品單價"><p class="tiny muted" style="margin:6px 0 0">商品名稱以上方題目名稱為準；此價格會依訂購數量計算。</p></div>
-      <div class="editor-grid"><div class="field"><label>商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>商品備註</label><label class="checkline" style="padding:12px 0"><input class="qe-allow-note" type="checkbox" ${q.allowNote!==false?'checked':''}> 允許填寫備註</label></div></div>
-      <div class="field"><div class="item-options-title">客製化／加購選項</div><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增客製化選項</button><p class="tiny muted">例如加飯、加肉、加蛋、少冰。每個選項可設定自己的單價（可填 0 元）及最多數量。</p></div>`;
-  } else if(itemLegacy){
-    extra=`<div class="field"><label>每個商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><div class="item-options-title">商品項目與單價</div><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增商品項目</button><p class="tiny muted">每個商品項目都可以設定自己的單價；訂購數量上限套用於每個項目。</p></div>`;
-  } else if(['single','multi','dropdown'].includes(q.type)){
-    extra=`<div class="field"><label>選項設定（價格可填 0）</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增選項</button><p class="tiny muted">價格用於需要計價的選項；一般調查保持 0 即可。</p></div>`;
-  }
-  return `<div class="question-editor" data-qid="${esc(q.id)}" data-index="${index}" data-item-mode="${esc(mode)}"><div class="editor-head"><strong>第 ${index+1} 題</strong><button class="mini-btn" style="padding:7px 10px" onclick="removeQuestion('${esc(q.id)}')">刪除</button></div><div class="field"><label>${q.type==='items'?'商品名稱／題目名稱':'題目名稱'}</label><input class="input qe-label" maxlength="160" value="${esc(q.label)}" placeholder="${q.type==='items'?'例如：香煎雞腿便當':'請輸入題目'}"></div><div class="editor-grid"><div class="field"><label>題目類型</label><select class="select qe-type" onchange="changeQuestionType('${esc(q.id)}',this.value)">${typeOptions.map(x=>`<option value="${x[0]}" ${q.type===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="field"><label>填寫規則</label><label class="checkline" style="padding:12px 0"><input class="qe-required" type="checkbox" ${q.required?'checked':''}> 必填</label></div></div>${extra}</div>`;
-}
-function optionEditorHtml(o,isCustom=false,isProductOption=false){
-  if(isCustom)return `<div class="option-editor custom-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="客製化名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="單價（元）"><input class="qe-option-maxqty" type="number" min="1" max="99" value="${Number(o.maxQty||5)}" placeholder="上限"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
-  if(isProductOption)return `<div class="option-editor product-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="商品名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="商品單價（元）"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
-  return `<div class="option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="選項名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="價格"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
-}
-
-
-function readBuilderDraft(){
-  const questions=[];
-  document.querySelectorAll('#questionEditors .question-editor').forEach(box=>{
-    const type=box.querySelector('.qe-type').value;
-    const itemMode=box.dataset.itemMode||'product';
-    const q={id:box.dataset.qid,label:box.querySelector('.qe-label').value.trim(),type,required:box.querySelector('.qe-required').checked,maxQty:Number(box.querySelector('.qe-maxqty')?.value||20),options:[]};
-    if(type==='items'){
-      q.itemMode=itemMode;
-      if(itemMode==='product'){
-        q.basePrice=Number(box.querySelector('.qe-base-price')?.value||0);
-        q.allowNote=box.querySelector('.qe-allow-note')?.checked!==false;
-        box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0),maxQty:Number(op.querySelector('.qe-option-maxqty')?.value||5)}));
-      }else{
-        box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0)}));
-      }
-    }else{
-      box.querySelectorAll('.option-editor').forEach(op=>q.options.push({id:op.dataset.optionId,label:op.querySelector('.qe-option-label').value.trim(),price:Number(op.querySelector('.qe-option-price').value||0)}));
-    }
-    questions.push(q);
-  });
-  return {title:$('builderTitle').value.trim(),description:$('builderDescription').value.trim(),allowEdit:$('builderAllowEdit').checked,questions};
-}
-
-
-function addQuestion(){const draft=readBuilderDraft();draft.questions.push(newQuestion($('newQuestionType').value));state.editDraft=draft;renderBuilder()}
-function removeQuestion(id){const draft=readBuilderDraft();draft.questions=draft.questions.filter(q=>q.id!==id);if(!draft.questions.length)draft.questions.push(newQuestion('text'));state.editDraft=draft;renderBuilder()}
-function changeQuestionType(id,type){
-  const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
-  const oldType=q.type;q.type=type;
-  if(type==='items'&&oldType!=='items'){q.itemMode='product';q.basePrice=0;q.maxQty=20;q.allowNote=true;q.options=[];}
-  else if(type!=='items'){delete q.itemMode;delete q.basePrice;delete q.allowNote;}
-  if(['single','multi','dropdown'].includes(type)&&!q.options.length)q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
-  if(type==='items'&&q.itemMode==='product')q.options=q.options||[];
-  state.editDraft=draft;renderBuilder();
-}
-function addOption(id){
-  const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
-  if(q.type==='items'&&q.itemMode==='product')q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'加飯',price:0,maxQty:5});
-  else if(q.type==='items')q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'新商品',price:0});
-  else q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'新選項',price:0});
-  state.editDraft=draft;renderBuilder();
-}
-async function saveBuilder(){
-  const draft=readBuilderDraft();
-  if(!draft.title){toast('請填寫問卷標題');return;}
-  if(!draft.questions.length){toast('至少需要一個題目');return;}
-  if(draft.questions.some(q=>!q.label)){toast('請填寫每一題的名稱');return;}
-  for(const q of draft.questions){
-    if(['single','multi','dropdown'].includes(q.type)&&(!q.options.length||q.options.some(o=>!o.label))){toast('選項題至少需要一個選項，而且選項名稱不可空白');return;}
-    if(q.type==='items'&&q.itemMode==='product'){
-      if(!Number.isFinite(q.basePrice)||q.basePrice<0){toast('商品單價必須是 0 或正數');return;}
-      if(!Number.isInteger(q.maxQty)||q.maxQty<1||q.maxQty>99){toast('商品最多數量必須設定為 1 至 99 的整數');return;}
-      if(q.options.some(o=>!o.label||!Number.isFinite(o.price)||o.price<0||!Number.isInteger(o.maxQty)||o.maxQty<1||o.maxQty>99)){toast('請檢查客製化選項名稱、價格及數量上限');return;}
-    }
-    if(q.type==='items'&&q.itemMode==='legacy'&&(!q.options.length||q.options.some(o=>!o.label))){toast('商品／數量題至少需要一個商品項目，且商品名稱不可空白');return;}
-  }
-  setBusy(true);try{let r;if(state.editSurveyId)r=await api('saveSurvey',state.token,state.editSurveyId,draft);else r=await api('createSurvey',state.token,Object.assign({},draft,{initialStatus:'開放中'}));toast(r.message);state.editDraft=null;state.editSurveyId='';await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}
-}
-async function toggleSurveyStatus(id,current){const next=current==='開放中'?'已結束':'開放中';const action=next==='開放中'?'重新開放':'結束';if(!confirm(`確定要${action}這份問卷「${next}」？`))return;setBusy(true);try{const r=await api('setSurveyStatus',state.token,id,next);toast(r.message);await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
-async function copySurvey(id){if(!confirm('複製這份問卷的題目、商品及設定，建立全新的問卷與工作表？\n舊問卷的填寫結果不會複製。新問卷預設未開放。'))return;setBusy(true);try{const r=await api('copySurvey',state.token,id);toast(r.message+'：'+r.title);await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
-async function viewResponses(id){setBusy(true);try{const r=await api('getAdminSurvey',state.token,id);state.adminSurvey=r.survey;state.adminResponses=r.responses;state.adminTab='responses';renderResponses()}catch(err){toast(err.message)}finally{setBusy(false)}}
-function buildShopOrderSummary(s, list) {
-  const rows = [];
-  (s.questions || []).forEach(q => {
-    if (q.type === 'items' && (q.itemMode === 'product' || q.basePrice !== undefined)) {
-      const productQty = list.reduce((sum, response) => {
-        const answer = response.answers && response.answers[q.id];
-        return sum + (answer && !Array.isArray(answer) ? Number(answer.productQty || 0) : 0);
-      }, 0);
-      const basePrice = Number(q.basePrice || 0);
-      if (productQty > 0) {
-        rows.push({
-          kind: '商品', name: q.label, option: '', price: basePrice,
-          qty: productQty, amount: basePrice * productQty
-        });
-      }
-      (q.options || []).forEach(option => {
-        const qty = list.reduce((sum, response) => {
-          const answer = response.answers && response.answers[q.id];
-          const selected = answer && !Array.isArray(answer)
-            ? (answer.customizations || []).find(item => item.optionId === option.id)
-            : null;
-          return sum + (selected ? Number(selected.qty || 0) : 0);
-        }, 0);
-        if (qty > 0) {
-          const price = Number(option.price || 0);
-          rows.push({
-            kind: '客製化／加購', name: q.label, option: option.label,
-            price, qty, amount: price * qty
-          });
-        }
-      });
-    } else if (q.type === 'items') {
-      // 舊版商品／數量題：保留歷史資料統計方式。
-      (q.options || []).forEach(option => {
-        const qty = list.reduce((sum, response) => {
-          const answer = response.answers && response.answers[q.id];
-          const selectedItems = Array.isArray(answer) ? answer : [];
-          const selected = selectedItems.find(item => item.optionId === option.id);
-          return sum + (selected ? Number(selected.qty || 0) : 0);
-        }, 0);
-        if (qty > 0) {
-          const price = Number(option.price || 0);
-          rows.push({
-            kind: '商品項目', name: q.label, option: option.label,
-            price, qty, amount: price * qty
-          });
-        }
-      });
-    } else if (['single', 'dropdown', 'multi'].includes(q.type)) {
-      (q.options || []).filter(option => Number(option.price || 0) > 0).forEach(option => {
-        const qty = list.reduce((sum, response) => {
-          const answer = response.answers && response.answers[q.id];
-          if (q.type === 'multi') {
-            return sum + (Array.isArray(answer) && answer.includes(option.id) ? 1 : 0);
-          }
-          return sum + (answer === option.id ? 1 : 0);
-        }, 0);
-        if (qty > 0) {
-          const price = Number(option.price || 0);
-          rows.push({
-            kind: '計價選項', name: q.label, option: option.label,
-            price, qty, amount: price * qty
-          });
-        }
-      });
-    }
-  });
-  return {
-    rows,
-    total: list.reduce((sum, response) => sum + Number(response.amount || 0), 0)
-  };
-}
-function renderShopOrderSummaryHtml(summary){
-  if(!summary.rows.length)return `<div class="notice">目前沒有商品或計價項目。<br>回覆總金額：<b>${money(summary.total)}</b></div>`;
-  return `<div class="shop-summary-wrap"><table class="shop-summary"><thead><tr><th>類型</th><th>商品／題目</th><th>客製化內容</th><th>單價</th><th>數量</th><th>金額</th></tr></thead><tbody>${summary.rows.map(r=>`<tr><td>${esc(r.kind)}</td><td>${esc(r.name)}</td><td>${esc(r.option)}</td><td>${money(r.price)}</td><td>${r.qty}</td><td class="money-cell">${money(r.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">全部回覆總金額</td><td class="money-cell">${money(summary.total)}</td></tr></tfoot></table></div>`;
-}
-function renderResponses(){
-  const s=state.adminSurvey,list=state.adminResponses||[];const total=list.reduce((n,r)=>n+Number(r.amount||0),0);
-  const stats=s.questions.map(q=>{
-    const counts={};
-    list.forEach(r=>{const a=r.answers[q.id];if(q.type==='single'||q.type==='dropdown'){const o=(q.options||[]).find(x=>x.id===a);if(o)counts[o.label]=(counts[o.label]||0)+1}else if(q.type==='multi'){(Array.isArray(a)?a:[]).forEach(id=>{const o=(q.options||[]).find(x=>x.id===id);if(o)counts[o.label]=(counts[o.label]||0)+1})}});
-    return Object.keys(counts).length?`<div class="history-item"><b>${esc(q.label)}</b>${Object.entries(counts).map(([k,v])=>`<div class="answer-line">${esc(k)}：${v}</div>`).join('')}</div>`:'';
-  }).join('');
-  const shopSummary=buildShopOrderSummary(s,list);
-  $('main').innerHTML=`<button class="back" onclick="loadAdmin()">← 返回管理中心</button><section class="hero"><h2>${esc(s.title)}</h2><p>問卷回覆及統計資料</p></section><div class="card"><div class="stat-grid"><div class="stat"><b>${list.length}</b><span>回覆筆數</span></div><div class="stat"><b>${money(total)}</b><span>金額合計</span></div><div class="stat"><b>${s.status==='開放中'?'開放中':'已結束'}</b><span>問卷狀態</span></div></div><button class="btn btn-green btn-block" style="margin-top:12px" onclick="exportSurveyExcel('${esc(s.id)}')">下載 Excel（個人回覆＋店家統整）</button></div><div class="card"><h3>店家下單統整（含金額）</h3>${renderShopOrderSummaryHtml(shopSummary)}</div><div class="card"><h3>一般選項統計</h3>${stats||'<div class="muted small">目前沒有一般選項題的統計資料。</div>'}</div><div class="card"><h3>個別回覆</h3>${list.length?list.map(r=>`<div class="order-card"><div class="order-top"><b>${esc(r.name)}（電話末四碼 ${esc(r.phoneLast4)}）</b><span class="amount">${money(r.amount)}</span></div><div class="tiny muted">${esc(dateText(r.submittedAt))} ・ ${esc(r.responseId)}</div>${renderFilledAnswersHtml(s,r.answers)}<button class="btn btn-secondary btn-block" style="margin-top:10px" onclick="adminEditResponse('${esc(r.responseId)}')">管理者修改這筆回覆</button></div>`).join(''):'<div class="notice">目前沒有回覆。</div>'}</div>`;
-}
-function adminEditResponse(responseId){const r=state.adminResponses.find(x=>x.responseId===responseId);if(!r)return;const s=state.adminSurvey;showModal(`<h3>管理者修改回覆</h3><p class="small muted">${esc(r.name)} ・ ${esc(responseId)}</p><div id="adminQuestionForm">${s.questions.map(q=>renderQuestion(q,r.answers)).join('')}</div><div class="btn-row"><button class="btn btn-primary" onclick="saveAdminResponse('${esc(responseId)}')">儲存</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);document.querySelectorAll('#adminQuestionForm .question-box[data-item-mode="product"]').forEach(syncProductOptionAvailability)}
-async function saveAdminResponse(id){const answers=collectAnswersFrom('#adminQuestionForm');setBusy(true);try{const r=await api('adminUpdateResponse',state.token,state.adminSurvey.id,id,answers);toast(r.message);closeModal();await viewResponses(state.adminSurvey.id)}catch(err){toast(err.message)}finally{setBusy(false)}}
-
-async function exportSurveyExcel(id){setBusy(true);try{const r=await api('exportSurveyXlsx',state.token,id);const raw=atob(r.base64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Excel 匯出完成')}catch(err){toast('匯出失敗：'+err.message)}finally{setBusy(false)}}
-function renderBackup(){const s=state.adminOverview.settings||{};const recoveryWarning=state.adminOverview.configCorrupted?`<div class="notice error">目前 JSON 設定檔無法讀取：${esc(state.adminOverview.configError||'格式錯誤')}。請從下方選擇有效的歷史備份進行還原；此時不要建立新問卷或修改備份設定。</div>`:'';$('adminContent').innerHTML=`<div class="card"><h3>☁️ 雲端備份與還原</h3>${recoveryWarning}<div class="notice success">設定自動備份：每次成功修改問卷設定前，自動保存上一版。每天凌晨約 3 點另建立完整備份。</div><div class="field"><label class="checkline"><input id="autoBackup" type="checkbox" ${s.autoBackup!==false?'checked':''}> 啟用自動雲端備份</label></div><div class="editor-grid"><div class="field"><label>設定版本保留數</label><input id="configKeep" type="number" class="input" min="10" max="100" value="${Number(s.configBackupKeep||50)}"></div><div class="field"><label>完整備份保留數</label><input id="fullKeep" type="number" class="input" min="3" max="30" value="${Number(s.fullBackupKeep||10)}"></div></div><button class="btn btn-secondary btn-block" onclick="saveBackupPrefs()">儲存備份設定</button><div class="divider"></div><div class="notice">最近完整備份：${esc(s.lastBackupAt||'尚未備份')}<br>手動備份會包含全部問卷設定及填寫結果。</div><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="runManualBackup()">☁ 立即雲端備份</button><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="refreshBackupList()">重新整理備份清單</button><div id="backupList" class="small muted" style="margin-top:12px">尚未載入備份清單。</div></div><div class="card"><h3>雲端檔案</h3><div class="btn-row"><a class="btn btn-plain" style="text-decoration:none;text-align:center" target="_blank" href="${esc(s.resultSpreadsheetUrl||'#')}">開啟問卷結果試算表</a><a class="btn btn-plain" style="text-decoration:none;text-align:center" target="_blank" href="${esc(s.jsonFileUrl||'#')}">開啟 JSON 設定</a></div></div>`;refreshBackupList()}
-async function saveBackupPrefs(){setBusy(true);try{const r=await api('saveBackupSettings',state.token,{autoBackup:$('autoBackup').checked,configBackupKeep:Number($('configKeep').value),fullBackupKeep:Number($('fullKeep').value)});toast(r.message);await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
-async function runManualBackup(){setBusy(true);try{const r=await api('backupNow',state.token);toast(r.message);await refreshBackupList();await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
-async function refreshBackupList(){const el=$('backupList');if(!el)return;el.innerHTML='正在讀取雲端備份…';try{const list=await api('listBackups',state.token);el.innerHTML=list.length?list.map(b=>`<div class="history-item"><div class="order-top"><b>${esc(b.type)}</b><span class="badge">${esc(dateText(b.createdAt))}</span></div><div class="tiny muted">${esc(b.description)} ・ ${Math.round(b.size/1024)} KB</div><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="previewRestore('${esc(b.id)}')">預覽／還原此版本</button></div>`).join(''):'<div class="notice">目前還沒有備份版本。</div>'}catch(err){el.innerHTML=`<div class="notice error">${esc(err.message)}</div>`}}
-async function previewRestore(id){setBusy(true);try{const p=await api('previewBackup',state.token,id);showModal(`<h3>備份版本預覽</h3><div class="notice">建立時間：${esc(dateText(p.createdAt))}<br>備份類型：${esc(p.type)}<br>問卷數：${p.surveyCount}<br>回覆數：${p.responseCount==null?'僅設定資料':p.responseCount}<br>問卷：${esc((p.titles||[]).join('、'))}</div><p class="small muted">還原前會自動保護目前資料。設定還原不會覆蓋現有回覆；完整還原會將該備份時間的回覆資料寫回對應工作表。</p><div class="btn-row"><button class="btn btn-primary" onclick="restoreSelected('${esc(id)}','settings')">只還原設定</button>${p.canRestoreFull?`<button class="btn btn-danger" onclick="restoreSelected('${esc(id)}','full')">完整還原</button>`:''}</div><button class="btn btn-plain btn-block" style="margin-top:8px" onclick="closeModal()">取消</button>`)}catch(err){toast(err.message)}finally{setBusy(false)}}
-async function restoreSelected(id,mode){const message=mode==='full'?'完整還原會以備份當時的資料取代對應問卷工作表目前的回覆。':'只還原問卷設定，保留目前所有填寫結果。';if(!confirm(message+'\n確定繼續？'))return;setBusy(true);try{const r=await api('restoreBackup',state.token,id,mode);closeModal();toast(r.message);await loadAdmin();state.adminTab='backup';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
-function renderSecurity(){$('adminContent').innerHTML=`<div class="card"><h3>🔐 管理者密碼</h3><p class="small muted">密碼只儲存在 GAS Script Properties，前端及 JSON 設定檔不會保存密碼。</p><div class="field"><label>新密碼（8 至 64 個字元）</label><input id="newPassword" class="input" type="password" maxlength="64" autocomplete="new-password"></div><div class="field"><label>再次輸入新密碼</label><input id="newPassword2" class="input" type="password" maxlength="64" autocomplete="new-password"></div><button class="btn btn-primary btn-block" onclick="saveNewPassword()">修改管理者密碼</button></div>`}
-async function saveNewPassword(){const a=$('newPassword').value,b=$('newPassword2').value;if(a.length<8){toast('新密碼至少 8 個字元');return}if(a!==b){toast('兩次輸入的密碼不一致');return}setBusy(true);try{const r=await api('changeAdminPassword',state.token,a);toast(r.message);$('newPassword').value='';$('newPassword2').value=''}catch(err){toast(err.message)}finally{setBusy(false)}}
-
-initPwaInstall();
-renderStartupScreen();
-setupBridge();
+connectToApp(0);
 </script>
 </body>
-</html>
+</html>`;
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('真好點問卷系統 API Bridge')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** API bridge 唯一公開入口；只允許白名單函式，不能任意呼叫後端函式。 */
+function bridgeDispatch(method, args) {
+  const dispatch = {
+    getPublicData: getPublicData,
+    getPublicSurvey: getPublicSurvey,
+    submitResponse: submitResponse,
+    lookupMyResponse: lookupMyResponse,
+    editMyResponse: editMyResponse,
+    loginAdmin: loginAdmin,
+    getAdminOverview: getAdminOverview,
+    getAdminSurvey: getAdminSurvey,
+    createSurvey: createSurvey,
+    copySurvey: copySurvey,
+    saveSurvey: saveSurvey,
+    setSurveyStatus: setSurveyStatus,
+    adminUpdateResponse: adminUpdateResponse,
+    changeAdminPassword: changeAdminPassword,
+    saveBackupSettings: saveBackupSettings,
+    backupNow: backupNow,
+    listBackups: listBackups,
+    previewBackup: previewBackup,
+    restoreBackup: restoreBackup,
+    exportSurveyXlsx: exportSurveyXlsx
+  };
+  const name = String(method || '');
+  if (!PUBLIC_API_METHODS[name] || typeof dispatch[name] !== 'function') throw new Error('不允許的 API 呼叫。');
+  if (!Array.isArray(args)) throw new Error('API 參數格式錯誤。');
+  return dispatch[name].apply(null, args);
+}
+
+/**
+ * 初始化系統。此函式必須從指定總控試算表綁定的 Apps Script 執行。
+ * 不會刪除既有工作表或雲端檔案；若資料夾有其他檔案，會在結果中列出供管理者自行確認。
+ */
+function initializeSurveySystem() {
+  const ss = getBoundSpreadsheetForSetup_();
+  const folder = DriveApp.getFolderById(JQ.DRIVE_FOLDER_ID);
+  const resultFile = DriveApp.getFileById(JQ.RESULT_SPREADSHEET_ID);
+  if (resultFile.getMimeType() !== MimeType.GOOGLE_SHEETS) {
+    throw new Error('提供的結果檔 ID 不是原生 Google 試算表。請確認 ID：' + JQ.RESULT_SPREADSHEET_ID);
+  }
+  if (ss.getId() !== resultFile.getId()) {
+    throw new Error('目前 GAS 綁定的試算表與設定的結果試算表 ID 不一致。請從「真好點問卷結果」這份試算表的「擴充功能 > Apps Script」開啟專案。');
+  }
+  resultFile.setName(JQ.RESULT_FILE_NAME);
+  if (!fileHasParent_(resultFile, folder.getId())) resultFile.moveTo(folder);
+
+  const overview = ensureSheet_(ss, JQ.OVERVIEW_SHEET);
+  const backup = ensureSheet_(ss, JQ.BACKUP_SHEET);
+  setupOverviewSheet_(overview);
+  setupBackupSheet_(backup);
+  if (!backup.isSheetHidden()) backup.hideSheet();
+
+  const jsonFile = findOrCreateJsonFile_(folder);
+  let config;
+  try {
+    const raw = jsonFile.getBlob().getDataAsString('UTF-8');
+    config = raw.trim() ? JSON.parse(raw) : null;
+  } catch (err) {
+    throw new Error('既有 JSON 設定檔無法解析，為避免覆蓋資料，初始化已停止。錯誤：' + err.message);
+  }
+  if (!config) {
+    config = defaultSystemConfig_();
+    jsonFile.setContent(JSON.stringify(config, null, 2));
+  } else {
+    config = normalizeSystemConfig_(config);
+    jsonFile.setContent(JSON.stringify(config, null, 2));
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  // 不刪除其他 Script Properties：管理者密碼雜湊、電話核對金鑰及登入版本都要保留。
+  props.setProperties({
+    JQ_FOLDER_ID: folder.getId(),
+    JQ_SPREADSHEET_ID: ss.getId(),
+    JQ_JSON_FILE_ID: jsonFile.getId()
+  }, false);
+  if (!props.getProperty('JQ_ADMIN_SALT') || !props.getProperty('JQ_ADMIN_HASH')) {
+    const salt = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('JQ_ADMIN_SALT', salt);
+    props.setProperty('JQ_ADMIN_HASH', hashPassword_(JQ.DEFAULT_ADMIN_PASSWORD, salt));
+  }
+  if (!props.getProperty('JQ_PHONE_SECRET')) props.setProperty('JQ_PHONE_SECRET', Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid());
+  if (!props.getProperty('JQ_TOKEN_VERSION')) props.setProperty('JQ_TOKEN_VERSION', '1');
+  if (!props.getProperty('JQ_INITIALIZED_AT')) props.setProperty('JQ_INITIALIZED_AT', new Date().toISOString());
+
+  config.surveys.forEach(survey => ensureSurveySheet_(ss, survey));
+  updateOverview_();
+  syncDailyBackupTrigger_();
+  SpreadsheetApp.flush();
+
+  const files = [];
+  const it = folder.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    files.push({ name: f.getName(), id: f.getId(), mimeType: f.getMimeType() });
+  }
+  const output = {
+    ok: true,
+    message: '初始化完成。此 GAS 已綁定指定總控試算表；接著部署網頁應用程式，將 /exec 網址填入 GitHub 的 index.html。',
+    folderUrl: folder.getUrl(),
+    spreadsheetUrl: ss.getUrl(),
+    jsonFileUrl: jsonFile.getUrl(),
+    filesInFolder: files,
+    defaultAdminPassword: JQ.DEFAULT_ADMIN_PASSWORD
+  };
+  Logger.log(JSON.stringify(output, null, 2));
+  return output;
+}
+
+/** 測試資料夾 ID、試算表 ID、存取權限，以及目前 GAS 是否綁定在指定試算表。 */
+function testStorageAccess() {
+  const bound = getBoundSpreadsheetForSetup_();
+  const folder = DriveApp.getFolderById(JQ.DRIVE_FOLDER_ID);
+  const file = DriveApp.getFileById(JQ.RESULT_SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(JQ.RESULT_SPREADSHEET_ID);
+  if (file.getMimeType() !== MimeType.GOOGLE_SHEETS) throw new Error('結果試算表 ID 指向的檔案不是原生 Google 試算表。');
+  const output = {
+    boundSpreadsheetName: bound.getName(),
+    boundSpreadsheetIdMatches: bound.getId() === JQ.RESULT_SPREADSHEET_ID,
+    folderName: folder.getName(),
+    folderUrl: folder.getUrl(),
+    spreadsheetName: ss.getName(),
+    spreadsheetUrl: ss.getUrl(),
+    spreadsheetMimeType: file.getMimeType(),
+    spreadsheetInsideFolder: fileHasParent_(file, folder.getId())
+  };
+  Logger.log(JSON.stringify(output, null, 2));
+  return output;
+}
+
+/** 公開首頁資料：只傳問卷清單，不傳任何填寫者資料。 */
+function getPublicData() {
+  const config = loadConfig_();
+  const surveys = config.surveys.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const publicSurveys = surveys.map(s => ({
+    id: s.id, title: s.title, description: s.description, status: s.status,
+    createdAt: s.createdAt, closedAt: s.closedAt || '', allowEdit: !!s.allowEdit,
+    responseCount: 0
+  }));
+  return {
+    ok: true,
+    appName: JQ.APP_NAME,
+    surveys: publicSurveys,
+    openSurveyCount: publicSurveys.filter(s => s.status === '開放中').length,
+    totalSurveyCount: publicSurveys.length,
+    emptyMessage: publicSurveys.length ? '目前沒有問卷進行中，請稍後再來。' : '目前尚未建立問卷，請稍後再來。'
+  };
+}
+
+/** 取得單份問卷題目。可以取得已結束問卷以供使用者查詢自己的舊回覆，但不可再送出。 */
+function getPublicSurvey(surveyId) {
+  const survey = findSurveyConfig_(surveyId);
+  if (!survey) throw new Error('找不到這份問卷。');
+  return { ok: true, survey: publicSurvey_(survey) };
+}
+
+function loginAdmin(password) {
+  const cache = CacheService.getScriptCache();
+  const lockUntil = Number(cache.get('JQ_LOGIN_LOCK_UNTIL') || 0);
+  if (Date.now() < lockUntil) return { ok: false, message: '登入嘗試過多，請 10 分鐘後再試。' };
+  const props = PropertiesService.getScriptProperties();
+  const salt = props.getProperty('JQ_ADMIN_SALT');
+  const saved = props.getProperty('JQ_ADMIN_HASH');
+  if (!salt || !saved) return { ok: false, message: '系統尚未初始化。' };
+  if (constantTimeEquals_(hashPassword_(String(password || ''), salt), saved)) {
+    cache.remove('JQ_LOGIN_FAILURES');
+    const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    const version = props.getProperty('JQ_TOKEN_VERSION') || '1';
+    cache.put('JQ_ADMIN_' + token, version, JQ.TOKEN_TTL_SECONDS);
+    return { ok: true, token: token, expiresIn: JQ.TOKEN_TTL_SECONDS };
+  }
+  const failures = Number(cache.get('JQ_LOGIN_FAILURES') || 0) + 1;
+  cache.put('JQ_LOGIN_FAILURES', String(failures), JQ.LOGIN_LOCK_SECONDS);
+  if (failures >= JQ.MAX_LOGIN_FAILURES) {
+    cache.put('JQ_LOGIN_LOCK_UNTIL', String(Date.now() + JQ.LOGIN_LOCK_SECONDS * 1000), JQ.LOGIN_LOCK_SECONDS);
+    cache.remove('JQ_LOGIN_FAILURES');
+    return { ok: false, message: '登入失敗次數過多，已暫停登入 10 分鐘。' };
+  }
+  return { ok: false, message: '管理者密碼錯誤。' };
+}
+
+function changeAdminPassword(token, newPassword) {
+  requireAdmin_(token);
+  const password = String(newPassword || '');
+  if (password.length < 8 || password.length > 64) throw new Error('新密碼長度必須為 8 至 64 個字元。');
+  const salt = Utilities.getUuid() + Utilities.getUuid();
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('JQ_ADMIN_SALT', salt);
+  props.setProperty('JQ_ADMIN_HASH', hashPassword_(password, salt));
+  const version = String(Number(props.getProperty('JQ_TOKEN_VERSION') || 1) + 1);
+  props.setProperty('JQ_TOKEN_VERSION', version);
+  CacheService.getScriptCache().put('JQ_ADMIN_' + token, version, JQ.TOKEN_TTL_SECONDS);
+  return { ok: true, message: '管理者密碼已修改。其他登入工作階段已失效。' };
+}
+
+function getAdminOverview(token) {
+  requireAdmin_(token);
+  const ss = getResultSpreadsheet_();
+  let config = null;
+  let configError = '';
+  try { config = loadConfig_(); } catch (err) { configError = err.message; }
+  let jsonUrl = '';
+  try { jsonUrl = DriveApp.getFileById(getJsonFileId_()).getUrl(); } catch (e) {}
+  const commonSettings = {
+    autoBackup: !config || !config.system ? true : config.system.autoBackup !== false,
+    configBackupKeep: config && config.system ? Number(config.system.configBackupKeep || JQ.CONFIG_BACKUP_KEEP) : JQ.CONFIG_BACKUP_KEEP,
+    fullBackupKeep: config && config.system ? Number(config.system.fullBackupKeep || JQ.FULL_BACKUP_KEEP) : JQ.FULL_BACKUP_KEEP,
+    lastBackupAt: config && config.system ? (config.system.lastBackupAt || '尚未備份') : '設定檔讀取失敗',
+    resultSpreadsheetUrl: ss.getUrl(),
+    folderUrl: DriveApp.getFolderById(JQ.DRIVE_FOLDER_ID).getUrl(),
+    jsonFileUrl: jsonUrl
+  };
+  if (!config) {
+    return { ok: true, configCorrupted: true, configError: configError, surveys: [], settings: commonSettings };
+  }
+  const surveys = config.surveys.map(s => {
+    const sheet = ss.getSheetByName(s.sheetName);
+    const responses = sheet ? readSurveyResponses_(sheet, s) : [];
+    return {
+      id: s.id, title: s.title, description: s.description, status: s.status,
+      createdAt: s.createdAt, closedAt: s.closedAt || '', allowEdit: !!s.allowEdit,
+      responseCount: responses.length,
+      totalAmount: responses.reduce((sum, r) => sum + Number(r.amount || 0), 0),
+      sheetName: s.sheetName,
+      spreadsheetUrl: ss.getUrl() + '#gid=' + (sheet ? sheet.getSheetId() : '')
+    };
+  }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return { ok: true, configCorrupted: false, surveys: surveys, settings: commonSettings };
+}
+
+function getAdminSurvey(token, surveyId) {
+  requireAdmin_(token);
+  const survey = findSurveyConfig_(surveyId);
+  if (!survey) throw new Error('找不到這份問卷。');
+  const sheet = getResultSpreadsheet_().getSheetByName(survey.sheetName);
+  if (!sheet) throw new Error('找不到問卷工作表：' + survey.sheetName);
+  const responses = readSurveyResponses_(sheet, survey).map(r => ({
+    responseId: r.responseId, submittedAt: r.submittedAt, name: r.name,
+    phoneLast4: r.phoneLast4, amount: r.amount, answers: r.answers
+  }));
+  return { ok: true, survey: publicSurvey_(survey), responses: responses };
+}
+
+function createSurvey(token, input) {
+  requireAdmin_(token);
+  const clean = validateSurveyConfig_(input || {});
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const config = loadConfig_();
+    backupConfigBeforeChange_(config, '建立新問卷：' + clean.title);
+    const id = 'Q' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMddHHmmss') + Utilities.getUuid().slice(0, 6).toUpperCase();
+    const now = new Date().toISOString();
+    const survey = Object.assign({}, clean, {
+      id: id,
+      status: input && input.initialStatus === '未開放' ? '未開放' : '開放中',
+      createdAt: now,
+      updatedAt: now,
+      closedAt: '',
+      sheetName: makeUniqueSheetName_(getResultSpreadsheet_(), clean.title, id)
+    });
+    config.surveys.push(survey);
+    saveConfig_(config);
+    ensureSurveySheet_(getResultSpreadsheet_(), survey);
+    updateOverview_();
+    return { ok: true, surveyId: id, message: survey.status === '開放中' ? '問卷已建立並開放填寫；其他問卷不受影響。' : '問卷已建立，尚未開放。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** 複製問卷：複製設計但不複製任何舊回覆，建立新 ID、新工作表，預設未開放。 */
+function copySurvey(token, surveyId) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const config = loadConfig_();
+    const source = config.surveys.find(s => s.id === String(surveyId));
+    if (!source) throw new Error('找不到要複製的問卷。');
+    backupConfigBeforeChange_(config, '複製問卷：' + source.title);
+
+    const now = new Date().toISOString();
+    const id = 'Q' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMddHHmmss') + Utilities.getUuid().slice(0, 6).toUpperCase();
+    const clone = JSON.parse(JSON.stringify(source));
+    clone.id = id;
+    clone.title = (String(source.title || '問卷').slice(0, 112) + '（副本）').slice(0, 120);
+    clone.status = '未開放';
+    clone.createdAt = now;
+    clone.updatedAt = now;
+    clone.closedAt = '';
+    clone.sheetName = makeUniqueSheetName_(getResultSpreadsheet_(), clone.title, id);
+    clone.questions = (clone.questions || []).map(q => {
+      q.id = 'q' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+      q.options = (q.options || []).map(o => Object.assign({}, o, {
+        id: 'o' + Utilities.getUuid().replace(/-/g, '').slice(0, 8)
+      }));
+      return q;
+    });
+
+    config.surveys.push(clone);
+    saveConfig_(config);
+    ensureSurveySheet_(getResultSpreadsheet_(), clone);
+    updateOverview_();
+    return {
+      ok: true,
+      surveyId: id,
+      title: clone.title,
+      sheetName: clone.sheetName,
+      message: '已複製問卷設計。新問卷尚未開放，且不包含舊問卷的填寫結果。'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveSurvey(token, surveyId, input) {
+  requireAdmin_(token);
+  const clean = validateSurveyConfig_(input || {});
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const config = loadConfig_();
+    const index = config.surveys.findIndex(s => s.id === String(surveyId));
+    if (index < 0) throw new Error('找不到這份問卷。');
+    backupConfigBeforeChange_(config, '修改問卷設定：' + config.surveys[index].title);
+    const old = config.surveys[index];
+    config.surveys[index] = Object.assign({}, old, clean, { id: old.id, status: old.status, createdAt: old.createdAt, updatedAt: new Date().toISOString(), closedAt: old.closedAt || '', sheetName: old.sheetName });
+    saveConfig_(config);
+    ensureSurveySheet_(getResultSpreadsheet_(), config.surveys[index]);
+    updateOverview_();
+    return { ok: true, message: '問卷設定已儲存，原有填寫結果保留。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** 個別切換問卷狀態；不會連帶關閉其他問卷。 */
+function setSurveyStatus(token, surveyId, status) {
+  requireAdmin_(token);
+  const next = ['開放中', '未開放', '已結束'].indexOf(String(status)) >= 0 ? String(status) : '';
+  if (!next) throw new Error('問卷狀態不正確。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const config = loadConfig_();
+    const survey = config.surveys.find(s => s.id === String(surveyId));
+    if (!survey) throw new Error('找不到這份問卷。');
+    if (survey.status === next) return { ok: true, message: '問卷狀態沒有變更。' };
+    backupConfigBeforeChange_(config, '變更問卷狀態：' + survey.title);
+    survey.status = next;
+    survey.updatedAt = new Date().toISOString();
+    survey.closedAt = next === '已結束' ? new Date().toISOString() : '';
+    saveConfig_(config);
+    updateOverview_();
+    return { ok: true, message: '「' + survey.title + '」已更新為「' + next + '」。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function submitResponse(surveyId, profile, answers) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const survey = findSurveyConfig_(surveyId);
+    if (!survey) throw new Error('找不到這份問卷。');
+    if (survey.status !== '開放中') throw new Error('這份問卷目前未開放填寫。');
+    const identity = normalizeIdentity_(profile || {});
+    const checked = validateAnswers_(survey, answers || {});
+    const sheet = ensureSurveySheet_(getResultSpreadsheet_(), survey);
+    const hash = identityHash_(identity.name, identity.phone);
+    const existing = readSurveyResponses_(sheet, survey).find(r => r.identityHash === hash);
+    if (existing) return { ok: false, duplicate: true, responseId: existing.responseId, message: '這份問卷已經有相同姓名及手機的回覆。請使用「查詢我的回覆」查看或修改原資料。' };
+    const response = {
+      identityHash: hash,
+      responseId: 'R' + Utilities.getUuid().replace(/-/g, '').slice(0, 14).toUpperCase(),
+      submittedAt: new Date().toISOString(),
+      name: identity.name,
+      phoneLast4: identity.phone.slice(-4),
+      amount: checked.amount,
+      answers: checked.answers
+    };
+    appendResponse_(sheet, survey, response);
+    updateOverview_();
+    return { ok: true, responseId: response.responseId, amount: response.amount, message: '提交成功，請記下回覆編號。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function lookupMyResponse(surveyId, profile) {
+  const survey = findSurveyConfig_(surveyId);
+  if (!survey) throw new Error('找不到這份問卷。');
+  const identity = normalizeIdentity_(profile || {});
+  const hash = identityHash_(identity.name, identity.phone);
+  const sheet = getResultSpreadsheet_().getSheetByName(survey.sheetName);
+  if (!sheet) return { ok: true, found: false, message: '查無符合資料，請確認姓名及手機號碼。' };
+  const found = readSurveyResponses_(sheet, survey).find(r => constantTimeEquals_(r.identityHash, hash));
+  if (!found) return { ok: true, found: false, message: '查無符合資料，請確認姓名及手機號碼。' };
+  return {
+    ok: true, found: true,
+    response: { responseId: found.responseId, submittedAt: found.submittedAt, name: found.name, phoneLast4: found.phoneLast4, amount: found.amount, answers: found.answers },
+    canEdit: survey.status === '開放中' && survey.allowEdit !== false,
+    surveyStatus: survey.status
+  };
+}
+
+function editMyResponse(surveyId, profile, responseId, answers) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const survey = findSurveyConfig_(surveyId);
+    if (!survey) throw new Error('找不到這份問卷。');
+    if (survey.status !== '開放中') throw new Error('問卷已結束，不能修改回覆。');
+    if (survey.allowEdit === false) throw new Error('管理者已關閉使用者修改功能。');
+    const identity = normalizeIdentity_(profile || {});
+    const hash = identityHash_(identity.name, identity.phone);
+    const checked = validateAnswers_(survey, answers || {});
+    const sheet = getResultSpreadsheet_().getSheetByName(survey.sheetName);
+    if (!sheet) throw new Error('找不到問卷工作表。');
+    const existing = readSurveyResponses_(sheet, survey).find(r => r.responseId === String(responseId) && constantTimeEquals_(r.identityHash, hash));
+    if (!existing) throw new Error('無法核對這筆回覆，請重新查詢。');
+    existing.answers = Object.assign({}, existing.answers || {}, checked.answers);
+    existing.amount = checked.amount;
+    existing.updatedAt = new Date().toISOString();
+    writeResponseById_(sheet, survey, existing);
+    updateOverview_();
+    return { ok: true, amount: checked.amount, message: '回覆已更新。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function adminUpdateResponse(token, surveyId, responseId, answers) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const survey = findSurveyConfig_(surveyId);
+    if (!survey) throw new Error('找不到這份問卷。');
+    const checked = validateAnswers_(survey, answers || {});
+    const sheet = getResultSpreadsheet_().getSheetByName(survey.sheetName);
+    if (!sheet) throw new Error('找不到問卷工作表。');
+    const existing = readSurveyResponses_(sheet, survey).find(r => r.responseId === String(responseId));
+    if (!existing) throw new Error('找不到要修改的回覆。');
+    existing.answers = Object.assign({}, existing.answers || {}, checked.answers);
+    existing.amount = checked.amount;
+    existing.updatedAt = new Date().toISOString();
+    writeResponseById_(sheet, survey, existing);
+    updateOverview_();
+    return { ok: true, message: '管理者已更新這筆回覆。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveBackupSettings(token, input) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const config = loadConfig_();
+    backupConfigBeforeChange_(config, '修改雲端備份設定');
+    config.system = config.system || {};
+    config.system.autoBackup = !(input && input.autoBackup === false);
+    config.system.configBackupKeep = clampInt_(input && input.configBackupKeep, 10, 100, JQ.CONFIG_BACKUP_KEEP);
+    config.system.fullBackupKeep = clampInt_(input && input.fullBackupKeep, 3, 30, JQ.FULL_BACKUP_KEEP);
+    config.system.updatedAt = new Date().toISOString();
+    saveConfig_(config);
+    syncDailyBackupTrigger_();
+    return { ok: true, message: '備份設定已儲存。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function backupNow(token) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const result = createFullBackup_('手動完整備份', '管理者手動建立完整雲端備份');
+    const config = loadConfig_();
+    config.system.lastBackupAt = result.createdAt;
+    saveConfig_(config);
+    return { ok: true, backup: result, message: '完整雲端備份已建立。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listBackups(token) {
+  requireAdmin_(token);
+  return listBackups_();
+}
+
+function previewBackup(token, backupId) {
+  requireAdmin_(token);
+  const snapshot = readBackupSnapshot_(backupId);
+  const surveyCount = snapshot.config && snapshot.config.surveys ? snapshot.config.surveys.length : 0;
+  const responseCount = snapshot.responses ? snapshot.responses.reduce((sum, x) => sum + Math.max(0, (x.values || []).length - 2), 0) : null;
+  return {
+    ok: true,
+    backupId: backupId,
+    type: snapshot.backupType,
+    createdAt: snapshot.createdAt,
+    surveyCount: surveyCount,
+    responseCount: responseCount,
+    titles: (snapshot.config.surveys || []).map(s => s.title),
+    canRestoreFull: !!snapshot.responses
+  };
+}
+
+function restoreBackup(token, backupId, mode) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const snapshot = readBackupSnapshot_(backupId);
+    const restoreMode = mode === 'full' ? 'full' : 'settings';
+    if (restoreMode === 'full' && !snapshot.responses) throw new Error('這個備份只有設定資料，不能執行完整還原。');
+    try {
+      createFullBackup_('還原前保護', '執行還原前自動保存目前設定及全部問卷結果');
+    } catch (backupError) {
+      createEmergencyBackup_('還原前緊急保護', '原設定檔無法解析，還原前保存原始設定文字及所有工作表資料');
+    }
+    const restored = normalizeSystemConfig_(snapshot.config);
+    if (restoreMode === 'full') {
+      const ss = getResultSpreadsheet_();
+      (snapshot.responses || []).forEach(item => {
+        let sheet = ss.getSheetByName(item.sheetName);
+        if (!sheet) sheet = ss.insertSheet(item.sheetName);
+        sheet.clearContents();
+        const values = item.values || [];
+        if (values.length && values[0].length) sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+        if (sheet.getMaxColumns() >= 2) sheet.hideColumns(1, 2);
+        if (sheet.getMaxRows() >= 2) sheet.hideRows(2, 1);
+        sheet.setFrozenRows(2);
+      });
+    }
+    saveConfig_(restored);
+    restored.surveys.forEach(s => ensureSurveySheet_(getResultSpreadsheet_(), s));
+    updateOverview_();
+    return { ok: true, message: restoreMode === 'full' ? '完整還原完成。還原前資料已另外建立保護備份。' : '問卷設定還原完成；目前所有填寫結果均予以保留。' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function buildShopOrderSummary_(survey, responses) {
+  const rows = [];
+  const totalAmount = responses.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  (survey.questions || []).forEach(q => {
+    if (q.type === 'items' && (q.itemMode === 'product' || q.basePrice !== undefined)) {
+      const productQty = responses.reduce((sum, r) => {
+        const a = r.answers ? r.answers[q.id] : null;
+        return sum + (a && !Array.isArray(a) ? Math.max(0, Number(a.productQty || 0)) : 0);
+      }, 0);
+      if (productQty > 0) rows.push(['商品', q.label, '', Number(q.basePrice || 0), productQty, Number(q.basePrice || 0) * productQty]);
+      (q.options || []).forEach(op => {
+        const qty = responses.reduce((sum, r) => {
+          const a = r.answers ? r.answers[q.id] : null;
+          const items = a && !Array.isArray(a) && Array.isArray(a.customizations) ? a.customizations : [];
+          const chosen = items.find(x => x.optionId === op.id);
+          return sum + (chosen ? Math.max(0, Number(chosen.qty || 0)) : 0);
+        }, 0);
+        if (qty > 0) rows.push(['客製化／加購', q.label, op.label, Number(op.price || 0), qty, Number(op.price || 0) * qty]);
+      });
+    } else if (q.type === 'items') {
+      // 舊版商品選項仍可產生商店彙總。
+      (q.options || []).forEach(op => {
+        const qty = responses.reduce((sum, r) => {
+          const items = Array.isArray(r.answers && r.answers[q.id]) ? r.answers[q.id] : [];
+          const chosen = items.find(x => x.optionId === op.id);
+          return sum + (chosen ? Number(chosen.qty || 0) : 0);
+        }, 0);
+        if (qty > 0) rows.push(['商品項目', q.label, op.label, Number(op.price || 0), qty, Number(op.price || 0) * qty]);
+      });
+    } else if (['single', 'dropdown', 'multi'].indexOf(q.type) >= 0) {
+      (q.options || []).filter(op => Number(op.price || 0) > 0).forEach(op => {
+        const qty = responses.reduce((sum, r) => {
+          const a = r.answers ? r.answers[q.id] : null;
+          if (q.type === 'multi') return sum + (Array.isArray(a) && a.indexOf(op.id) >= 0 ? 1 : 0);
+          return sum + (a === op.id ? 1 : 0);
+        }, 0);
+        if (qty > 0) rows.push(['計價選項', q.label, op.label, Number(op.price || 0), qty, Number(op.price || 0) * qty]);
+      });
+    }
+  });
+  if (!rows.length) rows.push(['', '此問卷沒有商品或計價項目', '', 0, 0, 0]);
+  rows.push(['', '', '', '', '總金額', Math.round(totalAmount * 100) / 100]);
+  return rows;
+}
+
+function exportSurveyXlsx(token, surveyId) {
+  requireAdmin_(token);
+  const survey = findSurveyConfig_(surveyId);
+  if (!survey) throw new Error('找不到這份問卷。');
+  const source = getResultSpreadsheet_().getSheetByName(survey.sheetName);
+  if (!source) throw new Error('找不到問卷工作表。');
+  const values = source.getDataRange().getValues();
+  const ids = values[1] || [];
+  const headers = values[0] || [];
+  const visibleIndexes = [];
+  for (let i = 2; i < ids.length; i++) if (ids[i]) visibleIndexes.push(i);
+  const personalRows = [visibleIndexes.map(i => headers[i])];
+  for (let r = 2; r < values.length; r++) {
+    if (!values[r][ids.indexOf('responseId')]) continue;
+    personalRows.push(visibleIndexes.map(i => values[r][i] instanceof Date ? values[r][i] : String(values[r][i] == null ? '' : values[r][i])));
+  }
+  const responses = readSurveyResponses_(source, survey);
+  const summaryRows = [['類型', '商品／題目', '客製化／選項', '單價', '總數量', '金額']].concat(buildShopOrderSummary_(survey, responses));
+
+  let temp;
+  try {
+    temp = SpreadsheetApp.create('暫存匯出_' + survey.id);
+    const personal = temp.getSheets()[0];
+    personal.setName('個人回覆');
+    if (personalRows.length && personalRows[0].length) {
+      personal.getRange(1, 1, personalRows.length, personalRows[0].length).setValues(personalRows);
+      personal.getRange(1, 1, 1, personalRows[0].length).setFontWeight('bold').setBackground('#FFE08A');
+      personal.setFrozenRows(1);
+      personal.autoResizeColumns(1, personalRows[0].length);
+    }
+    const summary = temp.insertSheet('店家統整');
+    summary.getRange(1, 1, summaryRows.length, summaryRows[0].length).setValues(summaryRows);
+    summary.getRange(1, 1, 1, summaryRows[0].length).setFontWeight('bold').setBackground('#FFE08A');
+    summary.setFrozenRows(1);
+    summary.autoResizeColumns(1, summaryRows[0].length);
+    if (summaryRows.length > 1) {
+      summary.getRange(2, 4, summaryRows.length - 1, 1).setNumberFormat('$#,##0.##');
+      summary.getRange(2, 6, summaryRows.length - 1, 1).setNumberFormat('$#,##0.##');
+    }
+    SpreadsheetApp.flush();
+    const url = 'https://docs.google.com/spreadsheets/d/' + temp.getId() + '/export?format=xlsx';
+    const response = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    });
+    if (response.getResponseCode() !== 200) throw new Error('Google 試算表匯出失敗，HTTP ' + response.getResponseCode());
+    const safeName = survey.title.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80) || '問卷結果';
+    return { ok: true, filename: safeName + '.xlsx', base64: Utilities.base64Encode(response.getContent()) };
+  } finally {
+    if (temp) DriveApp.getFileById(temp.getId()).setTrashed(true);
+  }
+}
+
+
+/** 每日完整備份觸發器。由 initializeSurveySystem() 建立。 */
+function dailyAutoBackup() {
+  const config = loadConfig_();
+  if (!config.system || config.system.autoBackup === false) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return;
+  try {
+    const result = createFullBackup_('每日完整備份', '系統每日自動備份全部問卷及填寫結果');
+    config.system.lastBackupAt = result.createdAt;
+    saveConfig_(config);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 資料驗證、工作表及雲端儲存
+// -----------------------------------------------------------------------------
+
+function defaultSystemConfig_() {
+  return {
+    schemaVersion: 1,
+    appName: JQ.APP_NAME,
+    updatedAt: new Date().toISOString(),
+    system: { autoBackup: true, configBackupKeep: JQ.CONFIG_BACKUP_KEEP, fullBackupKeep: JQ.FULL_BACKUP_KEEP, lastBackupAt: '' },
+    surveys: []
+  };
+}
+
+function normalizeSystemConfig_(input) {
+  const obj = input && typeof input === 'object' ? input : defaultSystemConfig_();
+  obj.schemaVersion = 1;
+  obj.appName = JQ.APP_NAME;
+  obj.system = obj.system || {};
+  if (obj.system.autoBackup === undefined) obj.system.autoBackup = true;
+  obj.system.configBackupKeep = clampInt_(obj.system.configBackupKeep, 10, 100, JQ.CONFIG_BACKUP_KEEP);
+  obj.system.fullBackupKeep = clampInt_(obj.system.fullBackupKeep, 3, 30, JQ.FULL_BACKUP_KEEP);
+  obj.surveys = Array.isArray(obj.surveys) ? obj.surveys : [];
+  return obj;
+}
+
+function validateSurveyConfig_(input) {
+  const title = String(input.title || '').trim().slice(0, 120);
+  if (!title) throw new Error('請輸入問卷標題。');
+  const description = String(input.description || '').trim().slice(0, 1000);
+  const sourceQuestions = Array.isArray(input.questions) ? input.questions : [];
+  if (!sourceQuestions.length) throw new Error('至少需要建立一個問卷題目。');
+  if (sourceQuestions.length > JQ.MAX_QUESTIONS) throw new Error('每份問卷最多 ' + JQ.MAX_QUESTIONS + ' 題。');
+
+  const questions = sourceQuestions.map((q, index) => {
+    const type = QUESTION_TYPES.indexOf(String(q.type)) >= 0 ? String(q.type) : 'text';
+    const label = String(q.label || '').trim().slice(0, 160);
+    if (!label) throw new Error('第 ' + (index + 1) + ' 題尚未填寫題目名稱。');
+    const clean = {
+      id: safeId_(q.id) || ('q' + Utilities.getUuid().replace(/-/g, '').slice(0, 10)),
+      label: label,
+      type: type,
+      required: !!q.required,
+      options: [],
+      maxQty: clampInt_(q.maxQty, 1, 99, 20)
+    };
+
+    if (type === 'items') {
+      // 舊版 items 是「一題多個商品」；保留舊資料讀取與修改能力。
+      // 新版 items 是「題目本身為商品，options 為客製化／加購項目」。
+      const itemMode = q.itemMode === 'product' || q.basePrice !== undefined ? 'product' : 'legacy';
+      clean.itemMode = itemMode;
+      if (itemMode === 'product') {
+        const basePrice = Number(q.basePrice == null ? 0 : q.basePrice);
+        if (!Number.isFinite(basePrice) || basePrice < 0 || basePrice > 10000000) {
+          throw new Error('題目「' + label + '」的商品單價必須是 0 至 10,000,000 的數字。');
+        }
+        clean.basePrice = basePrice;
+        clean.allowNote = q.allowNote !== false;
+        const options = Array.isArray(q.options) ? q.options : [];
+        clean.options = options.slice(0, 100).map((o, oi) => {
+          const optionLabel = String(o.label || '').trim().slice(0, 120);
+          if (!optionLabel) throw new Error('商品「' + label + '」的第 ' + (oi + 1) + ' 個客製化選項名稱是空白。');
+          const price = Number(o.price == null ? 0 : o.price);
+          if (!Number.isFinite(price) || price < 0 || price > 10000000) throw new Error('客製化選項價格必須是 0 至 10,000,000 的數字。');
+          return {
+            id: safeId_(o.id) || ('o' + Utilities.getUuid().replace(/-/g, '').slice(0, 8)),
+            label: optionLabel,
+            price: price,
+            maxQty: clampInt_(o.maxQty, 1, 99, 5)
+          };
+        });
+      } else {
+        // 舊問卷資料不自動轉換，避免把舊商品選項誤當成客製化內容。
+        const options = Array.isArray(q.options) ? q.options : [];
+        if (!options.length) throw new Error('商品／數量題「' + label + '」至少需要一個商品項目。');
+        clean.options = options.slice(0, 100).map((o, oi) => {
+          const optionLabel = String(o.label || '').trim().slice(0, 120);
+          if (!optionLabel) throw new Error('題目「' + label + '」的第 ' + (oi + 1) + ' 個選項名稱是空白。');
+          const price = Number(o.price == null ? 0 : o.price);
+          if (!Number.isFinite(price) || price < 0 || price > 10000000) throw new Error('選項價格必須是 0 至 10,000,000 的數字。');
+          return { id: safeId_(o.id) || ('o' + Utilities.getUuid().replace(/-/g, '').slice(0, 8)), label: optionLabel, price: price };
+        });
+      }
+    } else if (['single', 'multi', 'dropdown'].indexOf(type) >= 0) {
+      const options = Array.isArray(q.options) ? q.options : [];
+      if (!options.length) throw new Error('題目「' + label + '」至少需要一個選項。');
+      clean.options = options.slice(0, 100).map((o, oi) => {
+        const optionLabel = String(o.label || '').trim().slice(0, 120);
+        if (!optionLabel) throw new Error('題目「' + label + '」的第 ' + (oi + 1) + ' 個選項名稱是空白。');
+        const price = Number(o.price == null ? 0 : o.price);
+        if (!Number.isFinite(price) || price < 0 || price > 10000000) throw new Error('選項價格必須是 0 至 10,000,000 的數字。');
+        return { id: safeId_(o.id) || ('o' + Utilities.getUuid().replace(/-/g, '').slice(0, 8)), label: optionLabel, price: price };
+      });
+    }
+    return clean;
+  });
+
+  const ids = questions.map(q => q.id);
+  if (new Set(ids).size !== ids.length) throw new Error('題目識別碼重複，請重新整理後再儲存。');
+  questions.forEach(q => {
+    const optionIds = (q.options || []).map(o => o.id);
+    if (new Set(optionIds).size !== optionIds.length) throw new Error('題目「' + q.label + '」的選項識別碼重複。');
+  });
+  return {
+    title: title,
+    description: description,
+    questions: questions,
+    allowEdit: input.allowEdit !== false
+  };
+}
+
+
+function validateAnswers_(survey, answers) {
+  const output = {};
+  let total = 0;
+  survey.questions.forEach(q => {
+    const value = answers[q.id];
+    const hasBasicValue = value !== undefined && value !== null &&
+      !(typeof value === 'string' && !value.trim()) &&
+      !(Array.isArray(value) && value.length === 0);
+
+    if (q.type === 'items' && q.itemMode === 'product') {
+      const obj = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      const productQtyRaw = obj.productQty == null || obj.productQty === '' ? 0 : Number(obj.productQty);
+      if (!Number.isInteger(productQtyRaw) || productQtyRaw < 0 || productQtyRaw > Number(q.maxQty || 20)) {
+        throw new Error('商品「' + q.label + '」數量必須介於 0 至 ' + Number(q.maxQty || 20) + '。');
+      }
+      const customRaw = Array.isArray(obj.customizations) ? obj.customizations : [];
+      const hasProduct = productQtyRaw > 0;
+      if (q.required && !hasProduct) throw new Error('請選擇商品「' + q.label + '」的數量。');
+      const customMap = {};
+      customRaw.forEach(item => {
+        const optionId = String(item.optionId || '');
+        const option = (q.options || []).find(o => o.id === optionId);
+        if (!option) throw new Error('商品「' + q.label + '」包含無效的客製化選項。');
+        const qty = Number(item.qty || 0);
+        if (!Number.isInteger(qty) || qty < 0 || qty > Number(option.maxQty || 5)) {
+          throw new Error('「' + option.label + '」數量必須介於 0 至 ' + Number(option.maxQty || 5) + '。');
+        }
+        if (qty > 0) {
+          customMap[optionId] = (customMap[optionId] || 0) + qty;
+          if (customMap[optionId] > Number(option.maxQty || 5)) throw new Error('「' + option.label + '」數量超過上限。');
+        }
+      });
+      const customizations = Object.keys(customMap).map(optionId => ({ optionId: optionId, qty: customMap[optionId] }));
+      if (!hasProduct && customizations.length) throw new Error('請先選擇商品「' + q.label + '」，才能選擇客製化／加購內容。');
+      const note = q.allowNote !== false ? String(obj.note || '').trim().slice(0, 300) : '';
+      output[q.id] = { productQty: productQtyRaw, customizations: customizations, note: note };
+      total += Number(q.basePrice || 0) * productQtyRaw;
+      customizations.forEach(item => {
+        const option = q.options.find(o => o.id === item.optionId);
+        total += Number(option.price || 0) * item.qty;
+      });
+      return;
+    }
+
+    if (q.required && !hasBasicValue) throw new Error('請完成必填題目：「' + q.label + '」。');
+    if (!hasBasicValue) { output[q.id] = q.type === 'multi' || q.type === 'items' ? [] : ''; return; }
+
+    if (q.type === 'text' || q.type === 'textarea') {
+      const s = String(value).trim();
+      if (s.length > JQ.MAX_TEXT) throw new Error('題目「' + q.label + '」文字太長。');
+      output[q.id] = s;
+    } else if (q.type === 'date') {
+      const s = String(value);
+      if (s && !/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error('題目「' + q.label + '」日期格式不正確。');
+      output[q.id] = s;
+    } else if (q.type === 'number') {
+      const n = Number(value);
+      if (!Number.isFinite(n)) throw new Error('題目「' + q.label + '」必須填寫數字。');
+      output[q.id] = n;
+    } else if (q.type === 'rating') {
+      const n = Number(value);
+      if (!Number.isInteger(n) || n < 1 || n > 5) throw new Error('題目「' + q.label + '」評分請選擇 1 至 5。');
+      output[q.id] = n;
+    } else if (q.type === 'single' || q.type === 'dropdown') {
+      const selected = String(value);
+      const option = q.options.find(o => o.id === selected);
+      if (!option) throw new Error('題目「' + q.label + '」選項無效，請重新選擇。');
+      output[q.id] = selected;
+      total += Number(option.price || 0);
+    } else if (q.type === 'multi') {
+      const selections = Array.isArray(value) ? Array.from(new Set(value.map(String))) : [];
+      selections.forEach(id => {
+        const option = q.options.find(o => o.id === id);
+        if (!option) throw new Error('題目「' + q.label + '」包含無效選項。');
+        total += Number(option.price || 0);
+      });
+      output[q.id] = selections;
+    } else if (q.type === 'items') {
+      // 舊版商品／數量題相容：舊答案仍按選項商品及數量計算。
+      const selections = Array.isArray(value) ? value : [];
+      const cleaned = [];
+      selections.forEach(item => {
+        const option = q.options.find(o => o.id === String(item.optionId || ''));
+        if (!option) throw new Error('題目「' + q.label + '」包含無效品項。');
+        const qty = Math.floor(Number(item.qty) || 1);
+        if (qty < 1 || qty > Number(q.maxQty || 20)) throw new Error('題目「' + q.label + '」的數量超過設定上限。');
+        const note = String(item.note || '').trim().slice(0, 300);
+        cleaned.push({ optionId: option.id, qty: qty, note: note });
+        total += Number(option.price || 0) * qty;
+      });
+      output[q.id] = cleaned;
+    }
+  });
+  return { answers: output, amount: Math.round(total * 100) / 100 };
+}
+
+
+function normalizeIdentity_(profile) {
+  const name = String(profile.name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  let phone = String(profile.phone || '').replace(/[^0-9]/g, '');
+  if (phone.indexOf('886') === 0 && phone.length >= 11) phone = '0' + phone.slice(3);
+  if (!name) throw new Error('請輸入姓名。');
+  if (phone.length < 8 || phone.length > 15) throw new Error('請輸入正確的手機／聯絡電話。');
+  return { name: name, phone: phone };
+}
+
+function identityHash_(name, phone) {
+  const secret = PropertiesService.getScriptProperties().getProperty('JQ_PHONE_SECRET');
+  if (!secret) throw new Error('系統尚未初始化身份核對金鑰。');
+  const bytes = Utilities.computeHmacSha256Signature(String(name).toLowerCase() + '|' + String(phone), secret);
+  return Utilities.base64EncodeWebSafe(bytes);
+}
+
+function publicSurvey_(survey) {
+  return {
+    id: survey.id, title: survey.title, description: survey.description,
+    status: survey.status, allowEdit: survey.allowEdit !== false,
+    createdAt: survey.createdAt, closedAt: survey.closedAt || '',
+    questions: (survey.questions || []).map(q => {
+      const isProductItem = q.type === 'items' && (q.itemMode === 'product' || q.basePrice !== undefined);
+      const itemMode = q.type === 'items' ? (isProductItem ? 'product' : 'legacy') : undefined;
+      const publicQuestion = {
+        id: q.id, label: q.label, type: q.type, required: !!q.required,
+        maxQty: q.maxQty || 20,
+        itemMode: itemMode,
+        allowNote: isProductItem ? q.allowNote !== false : undefined,
+        options: (q.options || []).map(o => ({
+          id: o.id, label: o.label, price: Number(o.price || 0),
+          maxQty: Number(o.maxQty || (isProductItem ? 5 : q.maxQty || 20))
+        }))
+      };
+      // 只有新版「題目本身代表商品」才傳送 basePrice。
+      // 舊版 items 選項題不可帶入 basePrice: 0，否則前端會誤判為新版商品題。
+      if (isProductItem) publicQuestion.basePrice = Number(q.basePrice || 0);
+      return publicQuestion;
+    })
+  };
+}
+
+function ensureSurveySheet_(ss, survey) {
+  let sheet = ss.getSheetByName(survey.sheetName);
+  if (!sheet) sheet = ss.insertSheet(survey.sheetName);
+  if (sheet.getMaxColumns() < 7) sheet.insertColumnsAfter(sheet.getMaxColumns(), 7 - sheet.getMaxColumns());
+
+  // 重要：保留既有 row-2 欄位 ID 的原始欄序，新增題目只附加到最右側，避免舊答案錯位。
+  const currentLastColumn = Math.max(7, sheet.getLastColumn());
+  const existingIds = sheet.getLastRow() >= 2
+    ? sheet.getRange(2, 1, 1, currentLastColumn).getValues()[0].map(v => String(v || ''))
+    : [];
+  let ids = existingIds.some(Boolean) ? existingIds.slice() : [];
+  const fixedIds = ['_identityHash', '_answersJson', 'responseId', 'submittedAt', 'name', 'phoneLast4', 'amount'];
+  if (!ids.length) ids = fixedIds.slice();
+  fixedIds.forEach(id => { if (ids.indexOf(id) < 0) ids.push(id); });
+  (survey.questions || []).forEach(q => { if (ids.indexOf(q.id) < 0) ids.push(q.id); });
+  while (ids.length && !ids[ids.length - 1]) ids.pop();
+
+  if (sheet.getMaxColumns() < ids.length) sheet.insertColumnsAfter(sheet.getMaxColumns(), ids.length - sheet.getMaxColumns());
+  const oldHeaders = sheet.getLastRow() >= 1
+    ? sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0]
+    : [];
+  const oldMap = {};
+  existingIds.forEach((id, i) => { if (id) oldMap[id] = oldHeaders[i] || id; });
+  const qMap = {};
+  (survey.questions || []).forEach(q => { qMap[q.id] = q.label; });
+  const headers = ids.map(id => {
+    if (id === '_identityHash') return '_身份核對（系統隱藏）';
+    if (id === '_answersJson') return '_原始答案（系統隱藏）';
+    const fixed = { responseId: '回覆編號', submittedAt: '填寫時間', name: '姓名', phoneLast4: '電話末四碼', amount: '金額' };
+    return fixed[id] || qMap[id] || oldMap[id] || id;
+  });
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers.map(safeSheetCell_)]);
+  sheet.getRange(2, 1, 1, ids.length).setValues([ids]);
+  sheet.hideColumns(1, 2);
+  sheet.hideRows(2, 1);
+  sheet.setFrozenRows(2);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#FFE08A').setFontColor('#5B4215');
+  sheet.setColumnWidth(1, 30);
+  sheet.setColumnWidth(2, 30);
+  sheet.setColumnWidth(3, 190);
+  if (ids.length > 3) sheet.setColumnWidth(4, 145);
+  if (sheet.getLastRow() > 2) sheet.getRange(3, 7, sheet.getLastRow() - 2, 1).setNumberFormat('#,##0.##');
+  return sheet;
+}
+
+function appendResponse_(sheet, survey, response) {
+  const ids = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const row = new Array(ids.length).fill('');
+  const map = {
+    _identityHash: response.identityHash,
+    _answersJson: JSON.stringify(response.answers),
+    responseId: response.responseId,
+    submittedAt: response.submittedAt,
+    name: response.name,
+    phoneLast4: response.phoneLast4,
+    amount: response.amount
+  };
+  ids.forEach((id, i) => {
+    if (Object.prototype.hasOwnProperty.call(map, id)) row[i] = map[id];
+    else if (Object.prototype.hasOwnProperty.call(response.answers, id)) row[i] = formatAnswer_(survey.questions.find(q => q.id === id), response.answers[id]);
+  });
+  sheet.getRange(Math.max(3, sheet.getLastRow() + 1), 1, 1, row.length).setValues([row.map(safeSheetCell_)]);
+}
+
+function writeResponseById_(sheet, survey, response) {
+  const data = sheet.getDataRange().getValues();
+  const ids = data[1] || [];
+  let targetRow = -1;
+  for (let r = 2; r < data.length; r++) {
+    if (String(data[r][ids.indexOf('responseId')]) === String(response.responseId)) { targetRow = r + 1; break; }
+  }
+  if (targetRow < 0) throw new Error('找不到指定回覆列。');
+  const row = data[targetRow - 1].slice();
+  const map = { _identityHash: response.identityHash, _answersJson: JSON.stringify(response.answers), responseId: response.responseId, submittedAt: response.submittedAt, name: response.name, phoneLast4: response.phoneLast4, amount: response.amount };
+  ids.forEach((id, i) => {
+    if (Object.prototype.hasOwnProperty.call(map, id)) row[i] = map[id];
+    else if (Object.prototype.hasOwnProperty.call(response.answers, id)) {
+      const question = survey.questions.find(q => q.id === id);
+      if (question) row[i] = formatAnswer_(question, response.answers[id]);
+    }
+  });
+  sheet.getRange(targetRow, 1, 1, row.length).setValues([row.map(safeSheetCell_)]);
+}
+
+function readSurveyResponses_(sheet, survey) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 3) return [];
+  const all = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+  const ids = all[1] || [];
+  const idx = {};
+  ids.forEach((id, i) => { if (id) idx[String(id)] = i; });
+  const out = [];
+  for (let r = 2; r < all.length; r++) {
+    const row = all[r];
+    const responseId = row[idx.responseId];
+    if (!responseId) continue;
+    let answers = {};
+    try { answers = JSON.parse(row[idx._answersJson] || '{}'); } catch (e) { answers = {}; }
+    out.push({
+      rowNumber: r + 1,
+      identityHash: String(row[idx._identityHash] || ''),
+      responseId: String(responseId),
+      submittedAt: normalizeDateString_(row[idx.submittedAt]),
+      updatedAt: '',
+      name: String(row[idx.name] || ''),
+      phoneLast4: String(row[idx.phoneLast4] || ''),
+      amount: Number(row[idx.amount] || 0),
+      answers: answers
+    });
+  }
+  return out;
+}
+
+function formatAnswer_(question, answer) {
+  if (!question || answer === '' || answer == null) return '';
+  if (question.type === 'text' || question.type === 'textarea' || question.type === 'date' || question.type === 'number' || question.type === 'rating') return String(answer).trim();
+  if (question.type === 'single' || question.type === 'dropdown') {
+    const op = question.options.find(o => o.id === answer);
+    return op ? op.label + (Number(op.price || 0) ? '（$' + op.price + '）' : '') : '';
+  }
+  if (question.type === 'multi') {
+    return (Array.isArray(answer) ? answer : []).map(id => {
+      const op = question.options.find(o => o.id === id);
+      return op ? op.label + (Number(op.price || 0) ? '（$' + op.price + '）' : '') : id;
+    }).join('、');
+  }
+  if (question.type === 'items') {
+    if (question.itemMode === 'product' || (answer && !Array.isArray(answer) && typeof answer === 'object')) {
+      const obj = answer && typeof answer === 'object' ? answer : {};
+      const productQty = Number(obj.productQty || 0);
+      const parts = [];
+      if (productQty > 0) parts.push('商品數量：' + productQty + ' × $' + Number(question.basePrice || 0) + ' = $' + (productQty * Number(question.basePrice || 0)));
+      (Array.isArray(obj.customizations) ? obj.customizations : []).forEach(item => {
+        const op = (question.options || []).find(o => o.id === item.optionId);
+        const qty = Number(item.qty || 0);
+        if (op && qty > 0) parts.push(op.label + ' × ' + qty + '（$' + Number(op.price || 0) + '/份，小計 $' + (Number(op.price || 0) * qty) + '）');
+      });
+      if (obj.note) parts.push('備註：' + String(obj.note));
+      return parts.join('；');
+    }
+    // 舊版題型顯示相容
+    return (Array.isArray(answer) ? answer : []).map(item => {
+      const op = question.options.find(o => o.id === item.optionId);
+      return (op ? op.label : item.optionId) + ' × ' + item.qty + (op && Number(op.price || 0) ? '（$' + op.price + '/份）' : '') + (item.note ? '；備註：' + item.note : '');
+    }).join('；');
+  }
+  return String(answer).trim();
+}
+
+
+function setupOverviewSheet_(sheet) {
+  const headers = ['問卷ID', '問卷標題', '狀態', '建立時間', '結束時間', '回覆筆數', '金額合計', '工作表名稱', '直接開啟工作表'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#FFD45C').setFontColor('#5A4114');
+  sheet.setColumnWidths(1, headers.length, 150);
+  sheet.setColumnWidth(2, 260);
+  sheet.setColumnWidth(9, 360);
+}
+
+function setupBackupSheet_(sheet) {
+  const headers = ['備份ID', '建立時間', '備份類型', '備份說明', '分段序號', '總分段數', '壓縮資料'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+}
+
+function updateOverview_() {
+  const config = loadConfig_();
+  const ss = getResultSpreadsheet_();
+  const sheet = ensureSheet_(ss, JQ.OVERVIEW_SHEET);
+  setupOverviewSheet_(sheet);
+  if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).clearContent();
+  const rows = config.surveys.map(s => {
+    const dataSheet = ss.getSheetByName(s.sheetName);
+    const responses = dataSheet ? readSurveyResponses_(dataSheet, s) : [];
+    const gid = dataSheet ? dataSheet.getSheetId() : '';
+    return [s.id, s.title, s.status, s.createdAt, s.closedAt || '', responses.length, responses.reduce((sum, r) => sum + Number(r.amount || 0), 0), s.sheetName, gid ? ss.getUrl() + '#gid=' + gid : ''];
+  });
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, 9).setValues(rows.map(row => row.map(safeSheetCell_)));
+    sheet.getRange(2, 7, rows.length, 1).setNumberFormat('#,##0.##');
+    sheet.getRange(2, 9, rows.length, 1).setFontColor('#1769AA');
+  }
+}
+
+function ensureSheet_(ss, name) {
+  return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+
+function makeUniqueSheetName_(ss, title, id) {
+  let base = String(title || '問卷').replace(/[\\/:?*\[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
+  if (!base) base = '問卷';
+  let name = base;
+  if (ss.getSheetByName(name)) name = (base.slice(0, 55) + '_' + id.slice(-8)).slice(0, 99);
+  let n = 2;
+  while (ss.getSheetByName(name)) { name = (base.slice(0, 85) + '_' + n).slice(0, 99); n++; }
+  return name;
+}
+
+function loadConfig_() {
+  const id = getJsonFileId_();
+  const file = DriveApp.getFileById(id);
+  let parsed;
+  try { parsed = JSON.parse(file.getBlob().getDataAsString('UTF-8')); }
+  catch (e) { throw new Error('雲端 JSON 設定檔無法讀取或格式錯誤。請使用管理者的雲端還原功能恢復設定。'); }
+  return normalizeSystemConfig_(parsed);
+}
+
+function saveConfig_(config) {
+  config.updatedAt = new Date().toISOString();
+  let file = null;
+  try { file = DriveApp.getFileById(getJsonFileId_()); } catch (e) {}
+  if (!file) {
+    file = findOrCreateJsonFile_(DriveApp.getFolderById(JQ.DRIVE_FOLDER_ID));
+    PropertiesService.getScriptProperties().setProperty('JQ_JSON_FILE_ID', file.getId());
+  }
+  file.setContent(JSON.stringify(config, null, 2));
+}
+
+function findSurveyConfig_(surveyId) {
+  const id = String(surveyId || '');
+  return loadConfig_().surveys.find(s => s.id === id) || null;
+}
+
+function requireAdmin_(token) {
+  const value = String(token || '');
+  if (!value) throw new Error('管理者登入已逾期，請重新登入。');
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('JQ_ADMIN_' + value);
+  const current = PropertiesService.getScriptProperties().getProperty('JQ_TOKEN_VERSION') || '1';
+  if (!cached || cached !== current) throw new Error('管理者登入已逾期，請重新登入。');
+}
+
+/**
+ * 初始化及 ID 測試專用：確保 GAS 是從指定的「真好點問卷結果」試算表開啟。
+ * 網頁應用程式執行期間不可依賴 getActiveSpreadsheet()，所以正式 API 仍使用固定 ID 開啟。
+ */
+function getBoundSpreadsheetForSetup_() {
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (!active) {
+    throw new Error('目前 GAS 專案不是由 Google 試算表綁定開啟。請先開啟「真好點問卷結果」試算表，再選「擴充功能 > Apps Script」建立或開啟程式。');
+  }
+  if (active.getId() !== JQ.RESULT_SPREADSHEET_ID) {
+    throw new Error('目前 GAS 綁定的試算表不是設定中的「真好點問卷結果」。請從 ID 為 ' + JQ.RESULT_SPREADSHEET_ID + ' 的試算表開啟 Apps Script。');
+  }
+  return active;
+}
+
+function getResultSpreadsheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty('JQ_SPREADSHEET_ID') || JQ.RESULT_SPREADSHEET_ID;
+  if (id !== JQ.RESULT_SPREADSHEET_ID) throw new Error('系統 Script Properties 中的結果試算表 ID 與程式設定不一致，請重新檢查初始化設定。');
+  return SpreadsheetApp.openById(id);
+}
+
+function getJsonFileId_() {
+  const id = PropertiesService.getScriptProperties().getProperty('JQ_JSON_FILE_ID');
+  if (!id) throw new Error('尚未初始化 JSON 設定檔，請先執行 initializeSurveySystem()。');
+  return id;
+}
+
+function findOrCreateJsonFile_(folder) {
+  const files = folder.getFilesByName(JQ.JSON_FILE_NAME);
+  if (files.hasNext()) {
+    const file = files.next();
+    if (files.hasNext()) throw new Error('指定資料夾內有多個同名 JSON 設定檔，請先保留一個並刪除重複檔案。');
+    return file;
+  }
+  return folder.createFile(JQ.JSON_FILE_NAME, JSON.stringify(defaultSystemConfig_(), null, 2), 'application/json');
+}
+
+function fileHasParent_(file, folderId) {
+  const parents = file.getParents();
+  while (parents.hasNext()) if (parents.next().getId() === folderId) return true;
+  return false;
+}
+
+function safeSheetCell_(value) {
+  if (typeof value === 'string' && /^[\s\u0000-\u001f]*[=+@\-]/.test(value)) return "'" + value;
+  return value;
+}
+
+function clampInt_(value, min, max, fallback) {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+}
+
+function safeId_(value) {
+  const id = String(value || '').trim();
+  return /^[A-Za-z0-9_-]{1,50}$/.test(id) ? id : '';
+}
+
+function normalizeDateString_(value) {
+  if (value instanceof Date) return value.toISOString();
+  return String(value || '');
+}
+
+function hashPassword_(password, salt) {
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(salt) + '|' + String(password), Utilities.Charset.UTF_8);
+  return Utilities.base64EncodeWebSafe(bytes);
+}
+
+function constantTimeEquals_(a, b) {
+  const x = String(a || '');
+  const y = String(b || '');
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+}
+
+// -----------------------------------------------------------------------------
+// 備份：JSON 設定版本存在結果試算表的隱藏工作表；完整備份另包含全部問卷工作表資料。
+// -----------------------------------------------------------------------------
+
+function backupConfigBeforeChange_(config, description) {
+  if (!config.system || config.system.autoBackup === false) return null;
+  return createBackup_('設定自動備份', description, { backupType: '設定自動備份', createdAt: new Date().toISOString(), config: JSON.parse(JSON.stringify(config)) });
+}
+
+function createFullBackup_(type, description) {
+  const config = loadConfig_();
+  const ss = getResultSpreadsheet_();
+  const responses = [];
+  let responseCount = 0;
+  config.surveys.forEach(s => {
+    const sheet = ss.getSheetByName(s.sheetName);
+    if (!sheet) return;
+    const values = sheet.getDataRange().getValues();
+    responses.push({ surveyId: s.id, sheetName: s.sheetName, values: values });
+    responseCount += Math.max(0, values.length - 2);
+  });
+  return createBackup_(type, description, {
+    backupType: type,
+    createdAt: new Date().toISOString(),
+    config: JSON.parse(JSON.stringify(config)),
+    responses: responses,
+    surveyCount: config.surveys.length,
+    responseCount: responseCount
+  });
+}
+
+function createEmergencyBackup_(type, description) {
+  const ss = getResultSpreadsheet_();
+  let rawConfigText = '';
+  let config = defaultSystemConfig_();
+  try {
+    rawConfigText = DriveApp.getFileById(getJsonFileId_()).getBlob().getDataAsString('UTF-8');
+    const parsed = JSON.parse(rawConfigText);
+    config = normalizeSystemConfig_(parsed);
+  } catch (e) {}
+  const responses = [];
+  ss.getSheets().forEach(sheet => {
+    if (sheet.getName() === JQ.OVERVIEW_SHEET || sheet.getName() === JQ.BACKUP_SHEET) return;
+    responses.push({ surveyId: '', sheetName: sheet.getName(), values: sheet.getDataRange().getValues() });
+  });
+  return createBackup_(type, description, {
+    backupType: type,
+    createdAt: new Date().toISOString(),
+    config: config,
+    rawConfigText: rawConfigText,
+    responses: responses,
+    surveyCount: config.surveys.length,
+    responseCount: responses.reduce((sum, x) => sum + Math.max(0, (x.values || []).length - 2), 0)
+  });
+}
+
+function createBackup_(type, description, payload) {
+  const sheet = ensureSheet_(getResultSpreadsheet_(), JQ.BACKUP_SHEET);
+  setupBackupSheet_(sheet);
+  if (!sheet.isSheetHidden()) sheet.hideSheet();
+  const backupId = 'B' + Utilities.getUuid().replace(/-/g, '').slice(0, 18).toUpperCase();
+  const createdAt = new Date().toISOString();
+  payload.backupType = type;
+  payload.createdAt = createdAt;
+  payload.description = String(description || '雲端備份');
+  const json = JSON.stringify(payload);
+  const zipped = Utilities.gzip(Utilities.newBlob(json, 'application/json', 'backup.json'));
+  const base64 = Utilities.base64Encode(zipped.getBytes());
+  const chunks = [];
+  for (let i = 0; i < base64.length; i += JQ.BACKUP_CHUNK_SIZE) chunks.push(base64.slice(i, i + JQ.BACKUP_CHUNK_SIZE));
+  const rows = chunks.map((chunk, index) => [backupId, createdAt, type, payload.description, index + 1, chunks.length, chunk]);
+  if (rows.length) sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 7).setValues(rows);
+  pruneBackups_();
+  return { id: backupId, type: type, createdAt: createdAt, description: payload.description, size: base64.length, surveyCount: payload.surveyCount || (payload.config.surveys || []).length, responseCount: payload.responseCount || 0 };
+}
+
+function listBackups_() {
+  const sheet = getResultSpreadsheet_().getSheetByName(JQ.BACKUP_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+  const map = {};
+  rows.forEach(r => {
+    const id = String(r[0] || '');
+    if (!id) return;
+    if (!map[id]) map[id] = { id: id, createdAt: normalizeDateString_(r[1]), type: String(r[2]), description: String(r[3]), parts: Number(r[5] || 0), size: 0 };
+    map[id].size += String(r[6] || '').length;
+  });
+  return Object.keys(map).map(id => map[id]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function readBackupSnapshot_(backupId) {
+  const sheet = getResultSpreadsheet_().getSheetByName(JQ.BACKUP_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) throw new Error('目前沒有雲端備份。');
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues().filter(r => String(r[0]) === String(backupId));
+  if (!rows.length) throw new Error('找不到指定的備份版本。');
+  rows.sort((a, b) => Number(a[4]) - Number(b[4]));
+  const base64 = rows.map(r => String(r[6] || '')).join('');
+  const bytes = Utilities.base64Decode(base64);
+  const json = Utilities.ungzip(Utilities.newBlob(bytes)).getDataAsString('UTF-8');
+  return JSON.parse(json);
+}
+
+function pruneBackups_() {
+  let config;
+  try { config = loadConfig_(); } catch (e) { config = defaultSystemConfig_(); }
+  const configKeep = clampInt_(config.system.configBackupKeep, 10, 100, JQ.CONFIG_BACKUP_KEEP);
+  const fullKeep = clampInt_(config.system.fullBackupKeep, 3, 30, JQ.FULL_BACKUP_KEEP);
+  const list = listBackups_();
+  const keepIds = {};
+  const groups = {};
+  list.forEach(b => { const k = b.type === '設定自動備份' ? 'config' : 'full'; (groups[k] = groups[k] || []).push(b); });
+  (groups.config || []).slice(0, configKeep).forEach(b => keepIds[b.id] = true);
+  (groups.full || []).slice(0, fullKeep).forEach(b => keepIds[b.id] = true);
+  const sheet = getResultSpreadsheet_().getSheetByName(JQ.BACKUP_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+  const deleteRows = [];
+  rows.forEach((r, i) => { if (!keepIds[String(r[0])]) deleteRows.push(i + 2); });
+  deleteRows.reverse().forEach(row => sheet.deleteRow(row));
+}
+
+function syncDailyBackupTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'dailyAutoBackup') ScriptApp.deleteTrigger(trigger);
+  });
+  const config = loadConfig_();
+  if (!config.system || config.system.autoBackup === false) return;
+  ScriptApp.newTrigger('dailyAutoBackup').timeBased().everyDays(1).atHour(3).create();
+}
+
