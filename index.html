@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.2.0">
+  <meta name="jq-pwa-version" content="10.3.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -24,7 +24,7 @@
     .option-list{display:grid;gap:8px}.option{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #eee5d7;border-radius:14px;background:#fffefa}.option:has(input:checked){border-color:#f0be34;background:#fff9e5}.option input{accent-color:#e9a900;width:18px;height:18px}.option-name{flex:1;font-size:16px;font-weight:650}.price{font-size:15px;color:#d47b1c;font-weight:850}.qty-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qty{width:72px;text-align:center;padding:7px;border:1px solid #e9dfcc;border-radius:10px}.note-input{margin-top:8px;font-size:15px}
     .btn{padding:12px 16px;border-radius:13px;font-weight:850;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,#ffc928,#ffad35);color:#503715;box-shadow:0 5px 13px #e6ad3438}.btn-secondary{background:#fff3ce;color:#795719}.btn-plain{background:#f7f3e9;color:#665c4d}.btn-danger{background:#fff0ee;color:#bd4c43}.btn-green{background:#e8f8ed;color:#27794a}.btn-blue{background:#e8f3ff;color:#286a9c}.btn-block{width:100%}.btn-row{display:flex;gap:9px;flex-wrap:wrap}.btn-row>*{flex:1;min-width:115px}.total-box{background:#fff6d9;border:1px dashed #efbf3d;padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;margin:14px 0}.total-box strong{font-size:27px;color:#c77b07}.notice{padding:12px 14px;border-radius:13px;background:#fff7df;color:#805e16;font-size:15px;line-height:1.65}.notice.error{background:#fff0ee;color:#b54e43}.notice.success{background:#eaf8ed;color:#28774a}.hidden{display:none!important}.divider{height:1px;background:var(--line);margin:14px 0}
     .survey-card{border:1px solid #f0e3c8;border-radius:18px;padding:15px;margin:10px 0;background:linear-gradient(145deg,#fffefa,#fff9e9)}.survey-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.survey-head h3{margin:0 0 5px;font-size:18px}.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:13px;font-weight:850;background:#eaf8ed;color:#357849;white-space:nowrap}.badge.closed{background:#f2efeb;color:#81776b}.badge.draft{background:#eaf3ff;color:#326d9c}.survey-meta{color:var(--muted);font-size:13px;margin:8px 0 11px}
-    .admin-tabs{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin:0 0 12px}.tab{white-space:nowrap;padding:10px 13px;border-radius:12px;background:#f6f0e2;color:#75664f;font-weight:850;font-size:15px}.tab.active{background:#ffdd72;color:#60410d}
+    .admin-tabs{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:8px;overflow:visible;padding:0 0 4px;margin:0 0 12px}.admin-tabs .tab{flex:0 0 auto;white-space:nowrap;padding:10px 14px;border-radius:12px;background:#f6f0e2;color:#75664f;font-weight:850;font-size:15px}.admin-tabs .tab.active{background:#ffdd72;color:#60410d}
     .question-editor{border:1px solid #eee3ce;border-radius:16px;padding:13px;margin:12px 0;background:#fffefa}.editor-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}.editor-head strong{flex:1}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.option-editor{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:6px;margin:7px 0}.option-editor input{min-width:0;padding:9px;border:1px solid #e8dfce;border-radius:10px}.mini-btn{border-radius:10px;background:#fff0ed;color:#ba5548;font-weight:900}.checkline{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}.checkline input{accent-color:#d99a16;width:17px;height:17px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px;background:#fff6df;border-radius:14px;text-align:center}.stat b{display:block;font-size:22px;color:#9b6c0a}.stat span{font-size:13px;color:#81745d}.order-card,.history-item{border:1px solid #eee3ce;border-radius:15px;padding:13px;margin:10px 0}.order-top{display:flex;gap:8px;align-items:center;justify-content:space-between}.amount{color:#c77b07;font-size:20px;font-weight:900}.answer-line{padding:7px 0;border-bottom:1px dashed #eee3ce;font-size:15px}.answer-line:last-child{border-bottom:0}.modal-backdrop{position:fixed;inset:0;background:#2d251b77;display:grid;place-items:center;padding:16px;z-index:30}.modal{width:min(100%,480px);max-height:90vh;overflow:auto;background:#fffdf7;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 13px}.toast{position:fixed;z-index:50;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 18px;background:#332d25;color:white;border-radius:99px;font-size:15px;box-shadow:var(--shadow);max-width:90%;text-align:center}.loading{opacity:.68;pointer-events:none}.footer{text-align:center;color:#a69b88;font-size:13px;padding:16px 0 4px}.back{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#80652b;padding:7px 0;font-weight:800}.link{background:none;color:#2475b8;padding:0;text-decoration:underline;font-size:14px}
 
     /* v10 商品／數量題：商品與客製化數量使用大型 +/- 控制器 */
@@ -45,6 +45,11 @@
     .customization-info{min-width:0;flex:1}.customization-info strong{font-size:16px}.customization-info .tiny{display:block;margin-top:3px}
     .item-product-note{margin-top:12px}
     .option-editor.custom-option-editor{grid-template-columns:minmax(0,1fr) 82px 78px 36px}
+    .question-editor .product-base-price-field{padding:12px 13px;background:#fff8e4;border:1px solid #f0d58e;border-radius:14px;margin:14px 0}
+    .question-editor .product-base-price-field label{color:#76520e;font-weight:900}
+    .question-editor .product-base-price-field input{font-size:19px;font-weight:900;border-color:#e7c66d;background:#fff}
+    .question-editor .item-options-title{font-weight:900;color:#705321;margin:12px 0 7px}
+    .option-editor.product-option-editor{grid-template-columns:minmax(0,1fr) minmax(100px,125px) 36px}
     .shop-summary-wrap{overflow-x:auto}
     .shop-summary{width:100%;border-collapse:collapse;min-width:450px;font-size:14px}
     .shop-summary th,.shop-summary td{padding:9px 8px;border-bottom:1px solid #eee3ce;text-align:left;white-space:nowrap}
@@ -675,18 +680,19 @@ function questionEditorHtml(q,index){
   const itemLegacy=q.type==='items'&&mode!=='product';
   let extra='';
   if(itemProduct){
-    extra=`<div class="field"><label>商品單價</label><input class="input qe-base-price" type="number" min="0" step="any" value="${Number(q.basePrice||0)}" placeholder="商品單價"></div>
+    extra=`<div class="field product-base-price-field"><label>商品單價（元）</label><input class="input qe-base-price" type="number" min="0" max="10000000" step="any" inputmode="decimal" value="${Number(q.basePrice??0)}" placeholder="請輸入商品單價"><p class="tiny muted" style="margin:6px 0 0">商品名稱以上方題目名稱為準；此價格會依訂購數量計算。</p></div>
       <div class="editor-grid"><div class="field"><label>商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>商品備註</label><label class="checkline" style="padding:12px 0"><input class="qe-allow-note" type="checkbox" ${q.allowNote!==false?'checked':''}> 允許填寫備註</label></div></div>
-      <div class="field"><label>客製化／加購選項</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增客製化選項</button><p class="tiny muted">例如加飯、加肉、加蛋、少冰。每個選項可設定自己的價格（可填 0 元）及最多數量。</p></div>`;
+      <div class="field"><div class="item-options-title">客製化／加購選項</div><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增客製化選項</button><p class="tiny muted">例如加飯、加肉、加蛋、少冰。每個選項可設定自己的單價（可填 0 元）及最多數量。</p></div>`;
   } else if(itemLegacy){
-    extra=`<div class="notice">這是舊版商品題。為保留舊問卷的商品與回覆資料，暫時沿用舊題型。新建立的商品／數量題會使用「題目名稱＝商品名稱」的新格式。</div><div class="field"><label>舊版每個商品選項最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>舊版商品選項</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增舊版商品選項</button></div>`;
+    extra=`<div class="field"><label>每個商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><div class="item-options-title">商品項目與單價</div><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增商品項目</button><p class="tiny muted">每個商品項目都可以設定自己的單價；訂購數量上限套用於每個項目。</p></div>`;
   } else if(['single','multi','dropdown'].includes(q.type)){
     extra=`<div class="field"><label>選項設定（價格可填 0）</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增選項</button><p class="tiny muted">價格用於需要計價的選項；一般調查保持 0 即可。</p></div>`;
   }
   return `<div class="question-editor" data-qid="${esc(q.id)}" data-index="${index}" data-item-mode="${esc(mode)}"><div class="editor-head"><strong>第 ${index+1} 題</strong><button class="mini-btn" style="padding:7px 10px" onclick="removeQuestion('${esc(q.id)}')">刪除</button></div><div class="field"><label>${q.type==='items'?'商品名稱／題目名稱':'題目名稱'}</label><input class="input qe-label" maxlength="160" value="${esc(q.label)}" placeholder="${q.type==='items'?'例如：香煎雞腿便當':'請輸入題目'}"></div><div class="editor-grid"><div class="field"><label>題目類型</label><select class="select qe-type" onchange="changeQuestionType('${esc(q.id)}',this.value)">${typeOptions.map(x=>`<option value="${x[0]}" ${q.type===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="field"><label>填寫規則</label><label class="checkline" style="padding:12px 0"><input class="qe-required" type="checkbox" ${q.required?'checked':''}> 必填</label></div></div>${extra}</div>`;
 }
-function optionEditorHtml(o,isCustom=false){
-  if(isCustom)return `<div class="option-editor custom-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="客製化名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="單價"><input class="qe-option-maxqty" type="number" min="1" max="99" value="${Number(o.maxQty||5)}" placeholder="上限"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
+function optionEditorHtml(o,isCustom=false,isProductOption=false){
+  if(isCustom)return `<div class="option-editor custom-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="客製化名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="單價（元）"><input class="qe-option-maxqty" type="number" min="1" max="99" value="${Number(o.maxQty||5)}" placeholder="上限"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
+  if(isProductOption)return `<div class="option-editor product-option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="商品名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="商品單價（元）"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
   return `<div class="option-editor" data-option-id="${esc(o.id)}"><input class="qe-option-label" maxlength="120" value="${esc(o.label)}" placeholder="選項名稱"><input class="qe-option-price" type="number" min="0" step="any" value="${Number(o.price||0)}" placeholder="價格"><button class="mini-btn" onclick="this.parentNode.remove()">×</button></div>`;
 }
 
@@ -729,6 +735,7 @@ function changeQuestionType(id,type){
 function addOption(id){
   const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
   if(q.type==='items'&&q.itemMode==='product')q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'加飯',price:0,maxQty:5});
+  else if(q.type==='items')q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'新商品',price:0});
   else q.options.push({id:'o'+Math.random().toString(36).slice(2,8),label:'新選項',price:0});
   state.editDraft=draft;renderBuilder();
 }
@@ -744,7 +751,7 @@ async function saveBuilder(){
       if(!Number.isInteger(q.maxQty)||q.maxQty<1||q.maxQty>99){toast('商品最多數量必須設定為 1 至 99 的整數');return;}
       if(q.options.some(o=>!o.label||!Number.isFinite(o.price)||o.price<0||!Number.isInteger(o.maxQty)||o.maxQty<1||o.maxQty>99)){toast('請檢查客製化選項名稱、價格及數量上限');return;}
     }
-    if(q.type==='items'&&q.itemMode==='legacy'&&(!q.options.length||q.options.some(o=>!o.label))){toast('舊版商品題至少需要一個有效商品選項');return;}
+    if(q.type==='items'&&q.itemMode==='legacy'&&(!q.options.length||q.options.some(o=>!o.label))){toast('商品／數量題至少需要一個商品項目，且商品名稱不可空白');return;}
   }
   setBusy(true);try{let r;if(state.editSurveyId)r=await api('saveSurvey',state.token,state.editSurveyId,draft);else r=await api('createSurvey',state.token,Object.assign({},draft,{initialStatus:'開放中'}));toast(r.message);state.editDraft=null;state.editSurveyId='';await loadAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}
 }
@@ -794,7 +801,7 @@ function buildShopOrderSummary(s, list) {
         if (qty > 0) {
           const price = Number(option.price || 0);
           rows.push({
-            kind: '商品（舊版）', name: q.label, option: option.label,
+            kind: '商品項目', name: q.label, option: option.label,
             price, qty, amount: price * qty
           });
         }
