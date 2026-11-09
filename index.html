@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.17.0">
+  <meta name="jq-pwa-version" content="10.18.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -24,6 +24,7 @@
     .option-list{display:grid;gap:8px}.option{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #eee5d7;border-radius:14px;background:#fffefa}.option:has(input:checked){border-color:#f0be34;background:#fff9e5}.option input{accent-color:#e9a900;width:18px;height:18px}.option-name{flex:1;font-size:16px;font-weight:650}.price{font-size:15px;color:#d47b1c;font-weight:850}.qty-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qty{width:72px;text-align:center;padding:7px;border:1px solid #e9dfcc;border-radius:10px}.note-input{margin-top:8px;font-size:15px}
 
     /* v10.17：清理工作表已遺失的幽靈草稿，並強化客製化範圍空白值判斷 */
+    /* v10.18：商品題改為獨立卡片，客製化／加購預設收合 */
     .sheet-modal-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:15px;width:100%}
     .sheet-modal-actions>.btn{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:48px;box-sizing:border-box;margin:0!important;text-align:center;text-decoration:none;white-space:normal;line-height:1.4}
     .sheet-modal-actions>.btn:focus-visible{outline:3px solid #e2ad27;outline-offset:3px}
@@ -53,7 +54,27 @@
     .question-editor{border:1px solid #eee3ce;border-radius:16px;padding:13px;margin:12px 0;background:#fffefa}.editor-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}.editor-head strong{flex:1}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.option-editor{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:6px;margin:7px 0}.option-editor input{min-width:0;padding:9px;border:1px solid #e8dfce;border-radius:10px}.mini-btn{border-radius:10px;background:#fff0ed;color:#ba5548;font-weight:900}.checkline{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}.checkline input{accent-color:#d99a16;width:17px;height:17px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px;background:#fff6df;border-radius:14px;text-align:center}.stat b{display:block;font-size:22px;color:#9b6c0a}.stat span{font-size:13px;color:#81745d}.order-card,.history-item{border:1px solid #eee3ce;border-radius:15px;padding:13px;margin:10px 0}.order-top{display:flex;gap:8px;align-items:center;justify-content:space-between}.amount{color:#c77b07;font-size:20px;font-weight:900}.answer-line{padding:7px 0;border-bottom:1px dashed #eee3ce;font-size:15px}.answer-line:last-child{border-bottom:0}.modal-backdrop{position:fixed;inset:0;background:#2d251b77;display:grid;place-items:center;padding:16px;z-index:30}.modal{width:min(100%,480px);max-height:90vh;overflow:auto;background:#fffdf7;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 13px}.toast{position:fixed;z-index:50;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 18px;background:#332d25;color:white;border-radius:99px;font-size:15px;box-shadow:var(--shadow);max-width:90%;text-align:center}body.loading #main,body.loading .top,body.loading .install-strip{opacity:.58;pointer-events:none}.footer{text-align:center;color:#a69b88;font-size:13px;padding:16px 0 4px}.back{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#80652b;padding:7px 0;font-weight:800}.link{background:none;color:#2475b8;padding:0;text-decoration:underline;font-size:14px}
 
     /* v10 商品／數量題：商品與客製化數量使用大型 +/- 控制器 */
-    .product-qty-panel{border:1.5px solid #f1dfb8;background:#fffaf0;border-radius:16px;padding:13px;margin:10px 0}
+    .product-qty-panel{border:0;background:#fff;border-radius:0;padding:14px;margin:0}
+    /* v10.18：每個主商品獨立成卡片，客製化／加購預設收合 */
+    .product-question-box{margin:19px 0 23px;padding:0;overflow:hidden;background:#fff;border:1.7px solid #e8d4a8;border-radius:19px;box-shadow:0 6px 18px rgba(113,82,24,.09)}
+    .product-question-box>label{display:block;margin:0;padding:14px 15px;background:linear-gradient(110deg,#fff0bf,#fff8e4);border-bottom:1px solid #edddb9;font-size:19px;font-weight:950;line-height:1.45;color:#5b421b}
+    .product-question-box .product-price-line{padding:1px 1px 12px;margin:0;border-bottom:1px dashed #ead9b5}
+    .product-order-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding:12px 13px;border:1px solid #f0e2c2;border-radius:14px;background:#fff9eb}
+    .product-order-label{min-width:0;display:flex;flex-direction:column;gap:3px}
+    .product-order-label b{font-size:16px}
+    .product-order-label .tiny{line-height:1.35}
+    .customization-details{margin-top:12px;border:1px solid #eadbb9;border-radius:14px;background:#fffdf8;overflow:hidden}
+    .customization-details>summary{display:flex;align-items:center;gap:8px;min-height:49px;padding:11px 13px;cursor:pointer;list-style:none;font-size:15px;font-weight:900;color:#70521f;user-select:none;-webkit-tap-highlight-color:transparent}
+    .customization-details>summary::-webkit-details-marker{display:none}
+    .customization-details>summary:after{content:"＋";display:grid;place-items:center;width:25px;height:25px;flex:none;margin-left:0;border-radius:50%;background:#f8edcf;color:#805e1d;font-size:17px;font-weight:900}
+    .customization-details[open]>summary{background:#fff5da;border-bottom:1px solid #eee0be}
+    .customization-details[open]>summary:after{content:"－"}
+    .customization-summary-count{margin-left:auto;color:#97835e;font-size:12px;font-weight:750}
+    .customization-details[open]>summary .customization-summary-count{margin-left:auto}
+    .customization-details .customization-list{border:0;margin:0;padding:4px 13px 9px}
+    .customization-details .customization-row{gap:8px;padding:11px 0}
+    .customization-details .customization-row:last-child{border-bottom:0}
+    @media(max-width:420px){.product-question-box{margin:16px 0 20px;border-radius:16px}.product-question-box>label{padding:12px 13px;font-size:18px}.product-qty-panel{padding:12px}.product-order-row{padding:10px;gap:7px}.qty-control{gap:7px}.qty-control button{width:40px;height:40px}.qty-control input.qty-value{width:62px;height:42px;font-size:20px}}
     .product-price-line{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-weight:850}
     .product-price-line strong{font-size:20px;color:#c77b07}
     .qty-control{display:flex;align-items:center;gap:10px;flex:none}
@@ -555,10 +576,15 @@ function renderQuestion(q,answers){
       const a=answer&&typeof answer==='object'&&!Array.isArray(answer)?answer:{};
       const productQty=Math.max(0,Number(a.productQty||0));
       const custom=a.customizations||[];
+      const hasCustomSelection=custom.some(x=>Number(x.qty||0)>0);
+      const customMarkup=(q.options||[]).length?`<details class="customization-details" ${hasCustomSelection?'open':''}>
+        <summary><span>客製化／加購項目</span><span class="customization-summary-count">${(q.options||[]).length} 個選項・選填</span></summary>
+        <div class="customization-list">${(q.options||[]).map(o=>{const item=custom.find(x=>x.optionId===o.id);const qty=item?Number(item.qty||0):0;const max=Number(o.maxQty||5);return `<div class="customization-row"><div class="customization-info"><strong>${esc(o.label)}</strong><span class="tiny muted">${money(o.price||0)}／份・最多 ${max} 份</span></div><div class="qty-control compact"><button type="button" aria-label="減少${esc(o.label)}數量" onclick="adjustQty(this,-1,${max})" ${productQty<=0||qty<=0?'disabled':''}>－</button><input class="qty-value" data-qty-role="custom" data-option-id="${esc(o.id)}" type="number" inputmode="numeric" min="0" max="${max}" value="${qty}" oninput="handleQtyInput(this)" ${productQty<=0?'disabled':''}><button type="button" aria-label="增加${esc(o.label)}數量" onclick="adjustQty(this,1,${max})" ${productQty<=0||qty>=max?'disabled':''}>＋</button></div></div>`}).join('')}</div>
+      </details>`:`<p class="tiny muted" style="margin:12px 2px 0">此商品沒有額外客製化／加購項目。</p>`;
       body=`<div class="product-qty-panel" data-item-mode="product">
         <div class="product-price-line"><span>主商品單價</span><strong>${money(q.basePrice||0)}／份</strong></div>
-        <div class="qty-row" style="justify-content:space-between;align-items:center"><div><b>訂購數量</b><div class="tiny muted">最多 ${Number(q.maxQty||20)} 份</div></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||20)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||20)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||20)})">＋</button></div></div>
-        ${(q.options||[]).length?`<div class="customization-list"><h4>客製化／加購項目</h4>${(q.options||[]).map(o=>{const item=custom.find(x=>x.optionId===o.id);const qty=item?Number(item.qty||0):0;const max=Number(o.maxQty||5);return `<div class="customization-row"><div class="customization-info"><strong>${esc(o.label)}</strong><span class="tiny muted">${money(o.price||0)}／份・最多 ${max} 份</span></div><div class="qty-control compact"><button type="button" aria-label="減少${esc(o.label)}數量" onclick="adjustQty(this,-1,${max})" ${productQty<=0||qty<=0?'disabled':''}>－</button><input class="qty-value" data-qty-role="custom" data-option-id="${esc(o.id)}" type="number" inputmode="numeric" min="0" max="${max}" value="${qty}" oninput="handleQtyInput(this)" ${productQty<=0?'disabled':''}><button type="button" aria-label="增加${esc(o.label)}數量" onclick="adjustQty(this,1,${max})" ${productQty<=0||qty>=max?'disabled':''}>＋</button></div></div>`}).join('')}</div>`:'<p class="tiny muted">此商品沒有額外客製化／加購項目。</p>'}
+        <div class="product-order-row"><div class="product-order-label"><b>訂購數量</b><span class="tiny muted">最多 ${Number(q.maxQty||20)} 份</span></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||20)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||20)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||20)})">＋</button></div></div>
+        ${customMarkup}
         ${q.allowNote!==false?`<textarea class="textarea item-product-note" data-item-note maxlength="300" placeholder="商品備註（選填，例如不要香菜）">${esc(a.note||'')}</textarea>`:''}
       </div>`;
     }
@@ -568,7 +594,7 @@ function renderQuestion(q,answers){
     body=`<div class="option-list">${(q.options||[]).map(o=>{const chosen=Array.isArray(answer)?answer.find(x=>x.optionId===o.id):null;return `<div class="option item-option"><input type="checkbox" class="item-check" value="${esc(o.id)}" ${chosen?'checked':''}><div style="flex:1;min-width:0"><div class="option-name">${esc(o.label)} ${Number(o.price||0)?`<span class="price">${money(o.price)}</span>`:''}</div><div class="qty-row"><span class="tiny muted">數量</span><input class="qty item-qty" type="number" min="1" max="${Number(q.maxQty||20)}" value="${chosen?Number(chosen.qty||1):1}"><input class="input note-input item-note" style="flex:1;min-width:110px;min-height:36px;padding:7px 9px" maxlength="300" placeholder="備註（選填）" value="${esc(chosen?chosen.note||'':'')}"></div></div></div>`}).join('')}</div>`;
   }
   const boxItemMode=q.type==='items'?(formItemMode||'product'):'';
-  return `<div class="field question-box" data-qid="${esc(q.id)}" data-type="${esc(q.type)}" data-item-mode="${boxItemMode}"><label>${esc(q.label)}${required}</label>${body}</div>`;
+  return `<div class="field question-box ${boxItemMode==='product'?'product-question-box':''}" data-qid="${esc(q.id)}" data-type="${esc(q.type)}" data-item-mode="${boxItemMode}"><label>${esc(q.label)}${required}</label>${body}</div>`;
 }
 
 
