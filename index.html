@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.16.0">
+  <meta name="jq-pwa-version" content="10.17.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -23,7 +23,7 @@
     .input,.textarea,.select{width:100%;border:1.5px solid #e9dfcc;background:#fffefa;border-radius:13px;padding:12px 13px;outline:none;color:var(--ink);min-height:45px}.input:focus,.textarea:focus,.select:focus{border-color:#eab82f;box-shadow:0 0 0 3px #ffd95d35}.textarea{min-height:84px;resize:vertical}
     .option-list{display:grid;gap:8px}.option{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #eee5d7;border-radius:14px;background:#fffefa}.option:has(input:checked){border-color:#f0be34;background:#fff9e5}.option input{accent-color:#e9a900;width:18px;height:18px}.option-name{flex:1;font-size:16px;font-weight:650}.price{font-size:15px;color:#d47b1c;font-weight:850}.qty-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qty{width:72px;text-align:center;padding:7px;border:1px solid #e9dfcc;border-radius:10px}.note-input{margin-top:8px;font-size:15px}
 
-    /* v10.16：全站雲端作業提示、草稿建立／載入／匯入時顯示明確處理狀態 */
+    /* v10.17：清理工作表已遺失的幽靈草稿，並強化客製化範圍空白值判斷 */
     .sheet-modal-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:15px;width:100%}
     .sheet-modal-actions>.btn{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:48px;box-sizing:border-box;margin:0!important;text-align:center;text-decoration:none;white-space:normal;line-height:1.4}
     .sheet-modal-actions>.btn:focus-visible{outline:3px solid #e2ad27;outline-offset:3px}
@@ -42,6 +42,7 @@
     @keyframes jqspin{to{transform:rotate(360deg)}}
     .sync-status.syncing:before{content:"";display:inline-block;width:9px;height:9px;margin-right:6px;border:2px solid #e7d6a5;border-top-color:#9a7622;border-radius:50%;vertical-align:-1px;animation:jqspin .8s linear infinite}
     .draft-sync-line{display:flex;align-items:center;gap:8px;margin:9px 0 12px;padding:9px 11px;border-radius:11px;background:#f3f8ff;color:#426786;font-size:13px;line-height:1.5}
+    .draft-missing-note{color:#b42318;font-weight:750}
     .draft-sync-dot{width:8px;height:8px;flex:none;border-radius:50%;background:#69b8ed;box-shadow:0 0 0 3px #69b8ed25}
     @media(max-width:360px){.draft-card-actions{gap:7px}.draft-card-actions>.btn{font-size:13px;padding:6px 5px}}
 
@@ -954,10 +955,14 @@ function renderSheetDraftManager(data,options={}){
   const disabled=disableActions?'disabled':'';
   const cards=drafts.length?drafts.map(d=>{
     const modeLabel=d.mode==='EDIT'?'修改既有問卷':'新問卷草稿';
-    const statusLabel=d.status==='IMPORTED_NEW'?'已匯入建立（如需修改，請從正式問卷重新建立修改草稿）':(d.mode==='EDIT'?'修改草稿・尚未更新原問卷':'新問卷草稿・尚未匯入');
+    const orphaned=!!d.orphaned || (Array.isArray(d.missingSheets)&&d.missingSheets.length>0);
+    const statusLabel=orphaned?'幽靈草稿・部分工作表已不存在':(d.status==='IMPORTED_NEW'?'已匯入建立（如需修改，請從正式問卷重新建立修改草稿）':(d.mode==='EDIT'?'修改草稿・尚未更新原問卷':'新問卷草稿・尚未匯入'));
     const importLabel=d.mode==='EDIT'?'更新原問卷':'匯入建立問卷';
     const unavailable=d.importable===false?'disabled':'';
-    return `<div class="survey-card"><div class="survey-head"><div><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted">${esc(modeLabel)}</div></div><span class="badge ${d.status==='IMPORTED_NEW'?'closed':'draft'}">${esc(statusLabel)}</span></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><div class="draft-card-actions"><a class="btn btn-secondary ${loading?'is-loading':''}" href="${esc(d.mainUrl||'#')}" target="_blank" rel="noopener" aria-disabled="${disableActions?'true':'false'}" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟題目工作表</a><a class="btn btn-plain ${loading?'is-loading':''}" href="${esc(d.customUrl||'#')}" target="_blank" rel="noopener" aria-disabled="${disableActions?'true':'false'}" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟客製化工作表</a><button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">刪除草稿</button></div></div>`;
+    const mainLink=d.mainUrl?`<a class="btn btn-secondary ${loading?'is-loading':''}" href="${esc(d.mainUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟題目工作表</a>`:`<button class="btn btn-secondary" disabled>題目工作表不存在</button>`;
+    const customLink=d.customUrl?`<a class="btn btn-plain ${loading?'is-loading':''}" href="${esc(d.customUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟客製化工作表</a>`:`<button class="btn btn-plain" disabled>客製化工作表不存在</button>`;
+    const metaWarning=orphaned?`<br><span class="draft-missing-note">${esc((d.missingSheets||[]).join('、')||'部分工作表')}已被移除；此筆只能清除草稿紀錄。</span>`:'';
+    return `<div class="survey-card"><div class="survey-head"><div><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted">${esc(modeLabel)}</div></div><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
   }).join(''):(loading?'<div class="notice">正在從雲端讀取草稿清單……</div>':'<div class="notice">目前沒有試算表草稿。按上方「新增試算表草稿」，即可開始設計第一份。</div>');
   const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px">${esc(options.error)}</div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:'';
   showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><button class="btn btn-primary btn-block" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：從正式問卷列表建立修改草稿 → 修改兩張工作表 → 更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
@@ -1015,7 +1020,7 @@ async function importSpreadsheetSurveyDraft(draftId){
 }
 
 async function deleteSpreadsheetSurveyDraftUi(draftId){
-  if(!confirm('確定刪除這份試算表草稿的兩張工作表？\n\n只會刪除選取的草稿，不會刪除正式問卷或任何回覆。'))return;
+  if(!confirm('確定清除這份試算表草稿？\n\n如果工作表已被手動刪除，系統也會一併清除殘留的草稿紀錄；只處理選取的草稿，不會刪除正式問卷或任何回覆。'))return;
   setBusy(true,'正在刪除所選草稿及其工作表…');
   try{
     const r=await api('deleteSpreadsheetSurveyDraft',state.token,draftId);
