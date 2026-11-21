@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.21.0">
+  <meta name="jq-pwa-version" content="10.24.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -45,10 +45,26 @@
     .draft-sync-line{display:flex;align-items:center;gap:8px;margin:9px 0 12px;padding:9px 11px;border-radius:11px;background:#f3f8ff;color:#426786;font-size:13px;line-height:1.5}
     .draft-missing-note{color:#b42318;font-weight:750}
     .draft-sync-dot{width:8px;height:8px;flex:none;border-radius:50%;background:#69b8ed;box-shadow:0 0 0 3px #69b8ed25}
+    .edit-mode-list{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:14px 0}
+    .edit-mode-option{display:flex;align-items:flex-start;gap:12px;width:100%;padding:16px;border:1px solid #eadfc9;border-radius:16px;background:#fffdf7;text-align:left;color:var(--ink);box-shadow:0 3px 10px #6d52140c}
+    .edit-mode-option:active{transform:scale(.99)}
+    .edit-mode-option .mode-icon{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:13px;background:#fff1c5;font-size:22px}
+    .edit-mode-option .mode-copy{display:block;min-width:0;flex:1}
+    .edit-mode-option .mode-title{display:block;font-size:17px;font-weight:900;line-height:1.4;margin-bottom:4px}
+    .edit-mode-option .mode-desc{display:block;color:var(--muted);font-size:13px;line-height:1.55;white-space:normal;overflow-wrap:anywhere}
+    .edit-mode-option .mode-arrow{font-size:20px;color:#9a8b70;flex:none;margin:auto 0 auto auto}
     @media(max-width:360px){.draft-card-actions{gap:7px}.draft-card-actions>.btn{font-size:13px;padding:6px 5px}}
 
     .btn{padding:12px 16px;border-radius:13px;font-weight:850;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,#ffc928,#ffad35);color:#503715;box-shadow:0 5px 13px #e6ad3438}.btn-secondary{background:#fff3ce;color:#795719}.btn-plain{background:#f7f3e9;color:#665c4d}.btn-danger{background:#fff0ee;color:#bd4c43}.btn-green{background:#e8f8ed;color:#27794a}.btn-blue{background:#e8f3ff;color:#286a9c}.btn-block{width:100%}.btn-row{display:flex;gap:9px;flex-wrap:wrap}.btn-row>*{flex:1;min-width:115px}.total-box{background:#fff6d9;border:1px dashed #efbf3d;padding:14px 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;margin:14px 0}.total-box strong{font-size:27px;color:#c77b07}.notice{padding:12px 14px;border-radius:13px;background:#fff7df;color:#805e16;font-size:15px;line-height:1.65}.notice.error{background:#fff0ee;color:#b54e43}.notice.success{background:#eaf8ed;color:#28774a}.hidden{display:none!important}.divider{height:1px;background:var(--line);margin:14px 0}
     .survey-card{border:1px solid #f0e3c8;border-radius:18px;padding:15px;margin:10px 0;background:linear-gradient(145deg,#fffefa,#fff9e9)}.survey-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.survey-head h3{margin:0 0 5px;font-size:18px}.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:13px;font-weight:850;background:#eaf8ed;color:#357849;white-space:nowrap}.badge.closed{background:#f2efeb;color:#81776b}.badge.draft{background:#eaf3ff;color:#326d9c}.survey-meta{color:var(--muted);font-size:13px;margin:8px 0 11px}
+    /* v10.23：草稿卡片標題獨立整行，避免匯入狀態說明擠壓標題 */
+    .draft-survey-head{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;width:100%;min-width:0}
+    .draft-survey-head .draft-survey-title{display:block;width:100%;min-width:0;max-width:100%}
+    .draft-survey-head .draft-survey-title h3{display:block;width:100%;max-width:100%;margin:0 0 5px;font-size:18px;line-height:1.45;white-space:normal;word-break:normal;overflow-wrap:anywhere}
+    .draft-survey-head .draft-survey-mode{display:block;max-width:100%;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
+    .draft-survey-head .draft-survey-status{display:block;width:100%;min-width:0}
+    .draft-survey-head .badge{display:inline-block;max-width:100%;white-space:normal;line-height:1.45;overflow-wrap:anywhere}
+
     .admin-hero-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.admin-hero-head>div:first-child{min-width:0;flex:1}.admin-head-actions{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:7px;position:relative;z-index:1}.admin-head-actions .tab{white-space:nowrap;padding:9px 12px;border-radius:12px;background:#fff8df;color:#756044;font-weight:850;font-size:14px}.admin-head-actions .tab.active{background:#ffdd72;color:#60410d}.admin-tabs{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:8px;overflow:visible;padding:0 0 4px;margin:0 0 12px}.admin-tabs .tab{flex:0 0 auto;white-space:nowrap;padding:10px 14px;border-radius:12px;background:#f6f0e2;color:#75664f;font-weight:850;font-size:15px}.admin-tabs .tab.active{background:#ffdd72;color:#60410d}
     @media(max-width:480px){.admin-hero-head{flex-wrap:wrap}.admin-head-actions{justify-content:flex-start}.admin-head-actions .tab{padding:8px 10px;font-size:13px}}
     .question-editor{border:1px solid #eee3ce;border-radius:16px;padding:13px;margin:12px 0;background:#fffefa}.editor-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}.editor-head strong{flex:1}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.option-editor{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:6px;margin:7px 0}.option-editor input{min-width:0;padding:9px;border:1px solid #e8dfce;border-radius:10px}.mini-btn{border-radius:10px;background:#fff0ed;color:#ba5548;font-weight:900}.checkline{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}.checkline input{accent-color:#d99a16;width:17px;height:17px}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px;background:#fff6df;border-radius:14px;text-align:center}.stat b{display:block;font-size:22px;color:#9b6c0a}.stat span{font-size:13px;color:#81745d}.order-card,.history-item{border:1px solid #eee3ce;border-radius:15px;padding:13px;margin:10px 0}.order-top{display:flex;gap:8px;align-items:center;justify-content:space-between}.amount{color:#c77b07;font-size:20px;font-weight:900}.answer-line{padding:7px 0;border-bottom:1px dashed #eee3ce;font-size:15px}.answer-line:last-child{border-bottom:0}.modal-backdrop{position:fixed;inset:0;background:#2d251b77;display:grid;place-items:center;padding:16px;z-index:30}.modal{width:min(100%,480px);max-height:90vh;overflow:auto;background:#fffdf7;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 13px}.toast{position:fixed;z-index:50;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:12px 18px;background:#332d25;color:white;border-radius:99px;font-size:15px;box-shadow:var(--shadow);max-width:90%;text-align:center}body.loading #main,body.loading .top,body.loading .install-strip{opacity:.58;pointer-events:none}.footer{text-align:center;color:#a69b88;font-size:13px;padding:16px 0 4px}.back{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#80652b;padding:7px 0;font-weight:800}.link{background:none;color:#2475b8;padding:0;text-decoration:underline;font-size:14px}
@@ -806,7 +822,7 @@ function renderAdminSurveys(){
   const count=list.reduce((n,s)=>n+s.responseCount,0);
   $('adminContent').innerHTML=`<div class="card"><div class="stat-grid"><div class="stat"><b>${list.length}</b><span>問卷總數</span></div><div class="stat"><b>${open}</b><span>開放中</span></div><div class="stat"><b>${count}</b><span>全部問卷回覆數</span></div></div><div class="btn-row" style="margin-top:14px"><a class="btn btn-plain" href="${esc((state.adminOverview.settings||{}).resultSpreadsheetUrl||'#')}" target="_blank" style="text-align:center;text-decoration:none">開啟全部問卷結果試算表</a></div><p class="tiny muted" style="margin:9px 0 0">「全部問卷回覆數」是不分問卷目前狀態，將所有問卷的回覆筆數加總。所有問卷結果集中在同一份試算表，每份問卷各有自己的工作表。</p></div>
   <div class="card"><h3>建立問卷</h3><p class="small muted">選擇直接在程式設計，或先建立多份彼此獨立的 Google 試算表草稿，完成後再逐份匯入。</p><div class="btn-row"><button class="btn btn-primary" onclick="newSurvey()">程式內設計問卷</button><button class="btn btn-secondary" onclick="openSheetDraftManager()">試算表草稿管理</button></div><p class="tiny muted" style="margin:9px 0 0">試算表草稿各自有獨立的題目及客製化工作表；建立、編輯及匯入其中一份，不會覆蓋其他草稿或正式問卷。</p></div>
-  <div class="card"><h3>所有問卷</h3>${list.length?list.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.sheetName)} ・ ${s.responseCount} 份回覆 ・ 金額 ${money(s.totalAmount)}</div></div><span class="badge ${s.status==='開放中'?'':s.status==='已結束'?'closed':'draft'}">${esc(s.status)}</span></div><div class="survey-meta">建立：${esc(dateText(s.createdAt))}${s.closedAt?' ・ 結束：'+esc(dateText(s.closedAt)):''}</div><div class="btn-row"><button class="btn btn-secondary" onclick="editSurvey('${esc(s.id)}')">編輯問卷</button><button class="btn btn-blue" onclick="viewResponses('${esc(s.id)}')">查看回覆</button><button class="btn btn-plain" onclick="loadSurveyToSpreadsheet('${esc(s.id)}')">建立試算表修改草稿</button></div><div class="btn-row" style="margin-top:7px"><button class="btn ${s.status==='開放中'?'btn-danger':'btn-green'}" onclick="toggleSurveyStatus('${esc(s.id)}','${esc(s.status)}')">${s.status==='開放中'?'結束問卷':s.status==='已結束'?'重新開放':'開放問卷'}</button><button class="btn btn-plain" onclick="copySurvey('${esc(s.id)}')">複製問卷</button><a class="btn btn-plain" href="${esc(s.spreadsheetUrl)}" target="_blank" style="text-decoration:none;text-align:center">開啟結果試算表</a><button class="btn btn-danger" onclick="deleteSurvey('${esc(s.id)}')">刪除整張問卷</button></div></div>`).join(''):'<div class="notice">尚未建立問卷，請按上方按鈕建立第一份。</div>'}</div>`;
+  <div class="card"><h3>所有問卷</h3>${list.length?list.map(s=>`<div class="survey-card"><div class="survey-head"><div><h3>${esc(s.title)}</h3><div class="tiny muted">${esc(s.sheetName)} ・ ${s.responseCount} 份回覆 ・ 金額 ${money(s.totalAmount)}</div></div><span class="badge ${s.status==='開放中'?'':s.status==='已結束'?'closed':'draft'}">${esc(s.status)}</span></div><div class="survey-meta">建立：${esc(dateText(s.createdAt))}${s.closedAt?' ・ 結束：'+esc(dateText(s.closedAt)):''}</div><div class="btn-row"><button class="btn btn-secondary" onclick="editSurvey('${esc(s.id)}')">編輯問卷</button><button class="btn btn-blue" onclick="viewResponses('${esc(s.id)}')">查看回覆</button><button class="btn btn-plain" onclick="updateSurveyFromSpreadsheet('${esc(s.id)}')">從試算表更新</button></div><div class="btn-row" style="margin-top:7px"><button class="btn ${s.status==='開放中'?'btn-danger':'btn-green'}" onclick="toggleSurveyStatus('${esc(s.id)}','${esc(s.status)}')">${s.status==='開放中'?'結束問卷':s.status==='已結束'?'重新開放':'開放問卷'}</button><button class="btn btn-plain" onclick="copySurvey('${esc(s.id)}')">複製問卷</button><a class="btn btn-plain" href="${esc(s.spreadsheetUrl)}" target="_blank" style="text-decoration:none;text-align:center">開啟結果試算表</a><button class="btn btn-danger" onclick="deleteSurvey('${esc(s.id)}')">刪除整張問卷</button></div></div>`).join(''):'<div class="notice">尚未建立問卷，請按上方按鈕建立第一份。</div>'}</div>`;
 }
 
 
@@ -862,7 +878,24 @@ function newQuestion(type='text'){
 
 function blankSurvey(){return {title:'',description:'',allowEdit:true,questions:[newQuestion('text')]}}
 function newSurvey(){state.editSurveyId='';state.editDraft=blankSurvey();pushAppView({type:'builder',editSurveyId:'',editDraft:JSON.parse(JSON.stringify(state.editDraft))});state.adminTab='builder';renderAdmin()}
-async function editSurvey(id){setBusy(true);try{const r=await api('getPublicSurvey',id);state.editSurveyId=id;state.editDraft=JSON.parse(JSON.stringify(r.survey));pushAppView({type:'builder',editSurveyId:id,editDraft:JSON.parse(JSON.stringify(state.editDraft))});state.adminTab='builder';renderAdmin()}catch(err){toast(err.message)}finally{setBusy(false)}}
+function editSurvey(id){
+  const survey=((state.adminOverview&&state.adminOverview.surveys)||[]).find(x=>x.id===id);
+  if(!survey){toast('找不到這份問卷');return;}
+  showModal(`<h3>編輯問卷</h3><p class="small muted">${esc(survey.title)}<br>目前狀態：${esc(survey.status)}</p><div class="edit-mode-list"><button class="edit-mode-option" onclick="editSurveyInApp('${esc(id)}')"><span class="mode-icon">🧩</span><span class="mode-copy"><span class="mode-title">程式內編輯</span><span class="mode-desc">直接在真好點裡修改題目、商品、價格、客製化及一般選項。</span></span><span class="mode-arrow">›</span></button><button class="edit-mode-option" onclick="loadSurveyToSpreadsheet('${esc(id)}')"><span class="mode-icon">📊</span><span class="mode-copy"><span class="mode-title">試算表編輯</span><span class="mode-desc">使用 Google 試算表修改題目及大量商品設定。若已有修改草稿，會直接開啟，不會重複建立或覆蓋。</span></span><span class="mode-arrow">›</span></button></div><button class="btn btn-plain btn-block" onclick="closeModal()">返回問卷列表</button>`);
+}
+async function editSurveyInApp(id){
+  closeModal(true);
+  setBusy(true,'正在讀取問卷內容…');
+  try{
+    const r=await api('getPublicSurvey',id);
+    state.editSurveyId=id;
+    state.editDraft=JSON.parse(JSON.stringify(r.survey));
+    pushAppView({type:'builder',editSurveyId:id,editDraft:JSON.parse(JSON.stringify(state.editDraft))});
+    state.adminTab='builder';
+    renderAdmin();
+  }catch(err){showModal(`<h3>無法開啟問卷編輯</h3><div class="notice error">${esc(err.message)}</div><button class="btn btn-primary btn-block" onclick="closeModal()">關閉</button>`)}
+  finally{setBusy(false)}
+}
 function renderBuilder(){
   const s=state.editDraft||blankSurvey();
   $('adminContent').innerHTML=`<button class="back" onclick="appNavigateBack()">← 返回問卷列表</button><div class="card"><div class="section-title"><span class="emoji">🧩</span><h3>${state.editSurveyId?'編輯問卷':'設計新問卷'}</h3></div><div class="field"><label>問卷標題 *</label><input id="builderTitle" class="input" maxlength="120" value="${esc(s.title)}" placeholder="例如：員工旅遊報名調查"></div><div class="field"><label>問卷說明</label><textarea id="builderDescription" class="textarea" maxlength="1000" placeholder="填寫說明、截止日期等">${esc(s.description||'')}</textarea></div><label class="checkline"><input type="checkbox" id="builderAllowEdit" ${s.allowEdit!==false?'checked':''}> 使用者送出後，在問卷開放期間允許自行修改</label><div class="divider"></div><div class="order-top"><h3 style="margin:0">問卷題目</h3><span class="tiny muted">每題可設定必填或選填</span></div><div id="questionEditors">${s.questions.map((q,i)=>questionEditorHtml(q,i,s.questions)).join('')}</div><div class="field"><label>新增題目類型</label><div class="editor-grid"><select id="newQuestionType" class="select"><option value="items">商品題</option><option value="text">簡答題</option><option value="textarea">段落文字</option><option value="single">單選題</option><option value="multi">多選題</option><option value="dropdown">下拉選單</option><option value="date">日期題</option><option value="number">數字題</option><option value="rating">1～5 分評分</option></select><button class="btn btn-secondary" onclick="addQuestion()">＋ 新增題目</button></div></div><div class="btn-row"><button class="btn btn-primary" onclick="saveBuilder()">${state.editSurveyId?'儲存問卷修改':'建立並開放問卷'}</button><button class="btn btn-plain" onclick="appNavigateBack()">返回問卷列表</button></div></div>`;
@@ -982,16 +1015,17 @@ function renderSheetDraftManager(data,options={}){
   const cards=drafts.length?drafts.map(d=>{
     const modeLabel=d.mode==='EDIT'?'修改既有問卷':'新問卷草稿';
     const orphaned=!!d.orphaned || (Array.isArray(d.missingSheets)&&d.missingSheets.length>0);
-    const statusLabel=orphaned?'幽靈草稿・部分工作表已不存在':(d.status==='IMPORTED_NEW'?'已匯入建立（如需修改，請從正式問卷重新建立修改草稿）':(d.mode==='EDIT'?'修改草稿・尚未更新原問卷':'新問卷草稿・尚未匯入'));
+    const statusLabel=orphaned?'幽靈草稿・部分工作表已不存在':(d.status==='IMPORTED_NEW'?'已匯入建立':(d.mode==='EDIT'?'修改草稿・尚未更新':'新問卷草稿・尚未匯入'));
+    const statusNote=d.status==='IMPORTED_NEW'?'<br><span class="tiny muted">如需修改，請從正式問卷重新建立修改草稿。</span>':'';
     const importLabel=d.mode==='EDIT'?'更新原問卷':'匯入建立問卷';
     const unavailable=d.importable===false?'disabled':'';
     const mainLink=d.mainUrl?`<a class="btn btn-secondary ${loading?'is-loading':''}" href="${esc(d.mainUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟題目工作表</a>`:`<button class="btn btn-secondary" disabled>題目工作表不存在</button>`;
     const customLink=d.customUrl?`<a class="btn btn-plain ${loading?'is-loading':''}" href="${esc(d.customUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟客製化工作表</a>`:`<button class="btn btn-plain" disabled>客製化工作表不存在</button>`;
     const metaWarning=orphaned?`<br><span class="draft-missing-note">${esc((d.missingSheets||[]).join('、')||'部分工作表')}已被移除；此筆只能清除草稿紀錄。</span>`:'';
-    return `<div class="survey-card"><div class="survey-head"><div><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted">${esc(modeLabel)}</div></div><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
+    return `<div class="survey-card draft-survey-card"><div class="draft-survey-head"><div class="draft-survey-title"><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted draft-survey-mode">${esc(modeLabel)}</div></div><div class="draft-survey-status"><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}${statusNote}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
   }).join(''):(loading?'<div class="notice">正在從雲端讀取草稿清單……</div>':'<div class="notice">目前沒有試算表草稿。按上方「新增試算表草稿」，即可開始設計第一份。</div>');
   const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px">${esc(options.error)}</div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:'';
-  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><button class="btn btn-primary btn-block" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：從正式問卷列表建立修改草稿 → 修改兩張工作表 → 更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
+  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><button class="btn btn-primary btn-block" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：所有問卷 → 編輯問卷 → 試算表編輯 → 修改工作表 → 檢查並更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
 }
 
 async function createSpreadsheetDraftUi(){
@@ -1011,19 +1045,50 @@ async function submitSpreadsheetDraftUi(){
 }
 
 async function loadSurveyToSpreadsheet(id){
+  // 從「編輯問卷 → 試算表編輯」進入：後端會優先重用此問卷現有的修改草稿。
+  closeModal(true);
   const survey=((state.adminOverview&&state.adminOverview.surveys)||[]).find(x=>x.id===id);
   if(!survey){toast('找不到這份問卷');return;}
-  if(!confirm(`要為「${survey.title}」建立一份獨立的試算表修改草稿嗎？\n\n系統會把目前題目及客製化複製到新的兩張工作表。原問卷、其他草稿及歷史回覆都不會修改。`))return;
-  setBusy(true,'正在複製既有問卷並建立修改草稿…');
+  setBusy(true,'正在尋找既有修改草稿；若尚未建立，將建立專屬工作表…');
   try{
     const r=await api('loadSurveyToSpreadsheetDraft',state.token,id);
-    const list=await api('listSpreadsheetSurveyDrafts',state.token);
-    writeSheetDraftCache(list);
-    renderSheetDraftManager(list);
-    showModal(`<h3>已建立既有問卷修改草稿</h3><div class="notice success">${esc(r.message)}</div><p>原問卷：<b>${esc(r.title)}</b><br>目前狀態：${esc(r.status)}<br>歷史回覆：${Number(r.responseCount||0)} 份</p><div class="notice">題目順序依題目起始列由上而下排列，不必填順序數字；同一題的選項列請接在題目列後面。選擇題型時，必填自動填「否」；商品主商品數量上限自動填 10，備註預設允許。請修改題目及客製化工作表，完成後回到草稿管理按「更新原問卷」。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
-  }catch(err){toast('建立修改草稿失敗：'+err.message)}finally{setBusy(false)}
+    // 只更新本機清單快取；即使清單刷新失敗，也不影響剛才已成功建立／找到的草稿。
+    api('listSpreadsheetSurveyDrafts',state.token).then(list=>writeSheetDraftCache(list)).catch(err=>console.warn('背景更新草稿清單略過：',err));
+    const reuseNote=r.reused
+      ?'已找到這份問卷原本的修改草稿，直接開啟原草稿。你先前在試算表填寫的內容不會被重新載入或覆蓋。'
+      :'已建立這份問卷專屬的修改草稿。原問卷及歷史回覆沒有修改。';
+    showModal(`<h3>${r.reused?'已開啟既有修改草稿':'已建立既有問卷修改草稿'}</h3><div class="notice success">${esc(r.message||reuseNote)}</div><p>原問卷：<b>${esc(r.title||survey.title)}</b><br>目前狀態：${esc(r.status||survey.status)}<br>歷史回覆：${Number(r.responseCount||survey.responseCount||0)} 份</p><div class="notice">${esc(reuseNote)}<br><br>修改完成後，可按「檢查修改並更新原問卷」，先查看新增、修改及刪除項目，再確認套用。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url||r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-green" onclick="importSpreadsheetSurveyDraft('${esc(r.draftId)}')">檢查修改並更新原問卷</button><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
+  }catch(err){
+    showModal(`<h3>無法開啟試算表修改</h3><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err&&err.message?err.message:String(err))}</div><p class="small muted">如果這份問卷已有工作表不完整的舊草稿，請先到試算表草稿管理清除該筆幽靈草稿，再重新進入試算表編輯。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">前往試算表草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+  }finally{setBusy(false)}
 }
 
+async function updateSurveyFromSpreadsheet(id){
+  const survey=((state.adminOverview&&state.adminOverview.surveys)||[]).find(x=>x.id===id);
+  if(!survey){toast('找不到這份問卷');return;}
+  setBusy(true,'正在尋找這份問卷的試算表修改草稿…');
+  let draft=null;
+  try{
+    const data=await api('listSpreadsheetSurveyDrafts',state.token);
+    writeSheetDraftCache(data);
+    const matches=(data.drafts||[]).filter(d=>d.mode==='EDIT'&&d.surveyId===id).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+    draft=matches.find(d=>!d.orphaned&&d.importable);
+    if(!draft&&matches.length){
+      const broken=matches[0];
+      showModal(`<h3>修改草稿工作表不完整</h3><div class="notice error">「${esc(survey.title)}」已有修改草稿，但${esc((broken.missingSheets||[]).join('、')||'必要工作表')}不存在。請先清除這筆幽靈草稿，再從「編輯問卷 → 試算表編輯」重新建立。</div><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">開啟試算表草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+      return;
+    }
+    if(!draft){
+      showModal(`<h3>尚未建立試算表修改草稿</h3><p>「${esc(survey.title)}」目前沒有可更新的試算表修改草稿。</p><div class="notice">請先建立專屬修改草稿並在 Google 試算表完成修改。按下方按鈕即可前往「試算表編輯」。</div><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="loadSurveyToSpreadsheet('${esc(id)}')">建立／開啟試算表修改草稿</button><button class="btn btn-plain" onclick="closeModal()">取消</button></div>`);
+      return;
+    }
+  }catch(err){
+    showModal(`<h3>無法讀取試算表草稿</h3><div class="notice error">${esc(err.message||String(err))}</div><button class="btn btn-primary btn-block" onclick="closeModal()">關閉</button>`);
+    return;
+  }finally{setBusy(false)}
+  // 草稿清單已取得，接著使用共用的預覽、差異確認、備份及更新流程。
+  await importSpreadsheetSurveyDraft(draft.draftId);
+}
 function showPersistentImportError(message,importCompleted=false){
   const title=importCompleted?'匯入已完成，但草稿清單更新失敗':'匯入／更新問卷失敗';
   const intro=importCompleted
