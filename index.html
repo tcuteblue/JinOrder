@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.18.0">
+  <meta name="jq-pwa-version" content="10.21.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -317,7 +317,7 @@ function setBusy(on,message){
     if(overlay)overlay.classList.remove('hidden');
   }else if(overlay){overlay.classList.add('hidden');}
 }
-function showModal(html){if(window.__JQ_APP_NAV__&&window.__JQ_APP_NAV__.initialized&&!window.__JQ_APP_NAV__.modalActive){const nav=window.__JQ_APP_NAV__;if(nav.reuseModalSlot){history.replaceState({jqAppModal:true},'',location.href);nav.reuseModalSlot=false;}else history.pushState({jqAppModal:true},'',location.href);nav.modalActive=true;} $('modalRoot').innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`}
+function showModal(html,options={}){if(window.__JQ_APP_NAV__&&window.__JQ_APP_NAV__.initialized&&!window.__JQ_APP_NAV__.modalActive){const nav=window.__JQ_APP_NAV__;if(nav.reuseModalSlot){history.replaceState({jqAppModal:true},'',location.href);nav.reuseModalSlot=false;}else history.pushState({jqAppModal:true},'',location.href);nav.modalActive=true;}const backdropHandler=options.dismissBackdrop===false?'':'onclick="if(event.target===this)closeModal()"';$('modalRoot').innerHTML=`<div class="modal-backdrop" ${backdropHandler}><div class="modal">${html}</div></div>`}
 function closeModal(keepHistoryForNextView=false){window.__jqSheetDraftRequestSerial=(window.__jqSheetDraftRequestSerial||0)+1;$('modalRoot').innerHTML='';const nav=window.__JQ_APP_NAV__;if(nav&&nav.modalActive){nav.modalActive=false;if(keepHistoryForNextView){nav.reuseModalSlot=true;}else{nav.closingModal=true;history.back();}}}
 function setStatus(text,ok=true){
   const el=$('syncStatus');if(!el)return;
@@ -583,7 +583,7 @@ function renderQuestion(q,answers){
       </details>`:`<p class="tiny muted" style="margin:12px 2px 0">此商品沒有額外客製化／加購項目。</p>`;
       body=`<div class="product-qty-panel" data-item-mode="product">
         <div class="product-price-line"><span>主商品單價</span><strong>${money(q.basePrice||0)}／份</strong></div>
-        <div class="product-order-row"><div class="product-order-label"><b>訂購數量</b><span class="tiny muted">最多 ${Number(q.maxQty||20)} 份</span></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||20)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||20)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||20)})">＋</button></div></div>
+        <div class="product-order-row"><div class="product-order-label"><b>訂購數量</b><span class="tiny muted">最多 ${Number(q.maxQty||10)} 份</span></div><div class="qty-control"><button type="button" aria-label="減少商品數量" onclick="adjustQty(this,-1,${Number(q.maxQty||10)})">－</button><input class="qty-value" data-qty-role="product" type="number" inputmode="numeric" min="0" max="${Number(q.maxQty||10)}" value="${productQty}" oninput="handleQtyInput(this)"><button type="button" aria-label="增加商品數量" onclick="adjustQty(this,1,${Number(q.maxQty||10)})">＋</button></div></div>
         ${customMarkup}
         ${q.allowNote!==false?`<textarea class="textarea item-product-note" data-item-note maxlength="300" placeholder="商品備註（選填，例如不要香菜）">${esc(a.note||'')}</textarea>`:''}
       </div>`;
@@ -853,7 +853,7 @@ function copyProductCustomizations(targetId){
 }
 
 function newQuestion(type='text'){
-  const q={id:'q'+Math.random().toString(36).slice(2,10),label:'',type:type,required:false,maxQty:20,options:[]};
+  const q={id:'q'+Math.random().toString(36).slice(2,10),label:'',type:type,required:false,maxQty:10,options:[]};
   if(type==='items'){q.itemMode='product';q.basePrice=0;q.allowNote=true;q.options=[];}
   else if(['single','multi','dropdown'].includes(type))q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
   return q;
@@ -873,7 +873,7 @@ function questionEditorHtml(q,index,allQuestions){
   let extra='';
   if(q.type==='items'){
     extra=`<div class="field product-base-price-field"><label>主商品單價（元）</label><input class="input qe-base-price" type="number" min="0" max="10000000" step="any" inputmode="decimal" value="${Number(q.basePrice??0)}" placeholder="請輸入主商品單價"><p class="tiny muted" style="margin:6px 0 0">上方題目名稱就是主商品名稱；主商品金額會依訂購數量計算。</p></div>
-      <div class="editor-grid"><div class="field"><label>主商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||20)}"></div><div class="field"><label>商品備註</label><label class="checkline" style="padding:12px 0"><input class="qe-allow-note" type="checkbox" ${q.allowNote!==false?'checked':''}> 允許填寫備註</label></div></div>
+      <div class="editor-grid"><div class="field"><label>主商品最多數量</label><input class="input qe-maxqty" type="number" min="1" max="99" value="${Number(q.maxQty||10)}"></div><div class="field"><label>商品備註</label><label class="checkline" style="padding:12px 0"><input class="qe-allow-note" type="checkbox" ${q.allowNote!==false?'checked':''}> 允許填寫備註</label></div></div>
       ${productCustomizationSourceHtml(q.id,allQuestions)}<div class="field"><div class="item-options-title">客製化／加購項目</div><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,true)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增客製化／加購項目</button><p class="tiny muted">例如加飯、加肉、加蛋、少冰。各項目可單獨設定價格及最多數量；免費項目可填 0 元。</p></div>`;
   } else if(['single','multi','dropdown'].includes(q.type)){
     extra=`<div class="field"><label>選項設定（價格可填 0）</label><div class="qe-options">${(q.options||[]).map(o=>optionEditorHtml(o,false)).join('')}</div><button class="btn btn-plain btn-block" onclick="addOption('${esc(q.id)}')">＋ 新增選項</button><p class="tiny muted">價格用於需要計價的選項；一般調查保持 0 即可。</p></div>`;
@@ -892,7 +892,7 @@ function readBuilderDraft(){
   document.querySelectorAll('#questionEditors .question-editor').forEach(box=>{
     const type=box.querySelector('.qe-type').value;
     const itemMode=box.dataset.itemMode||'product';
-    const q={id:box.dataset.qid,label:box.querySelector('.qe-label').value.trim(),type,required:box.querySelector('.qe-required').checked,maxQty:Number(box.querySelector('.qe-maxqty')?.value||20),options:[]};
+    const q={id:box.dataset.qid,label:box.querySelector('.qe-label').value.trim(),type,required:box.querySelector('.qe-required').checked,maxQty:Number(box.querySelector('.qe-maxqty')?.value||10),options:[]};
     if(type==='items'){
       q.itemMode='product';
       q.basePrice=Number(box.querySelector('.qe-base-price')?.value||0);
@@ -912,7 +912,7 @@ function removeQuestion(id){const draft=readBuilderDraft();draft.questions=draft
 function changeQuestionType(id,type){
   const draft=readBuilderDraft();const q=draft.questions.find(x=>x.id===id);if(!q)return;
   const oldType=q.type;q.type=type;
-  if(type==='items'){q.itemMode='product';q.basePrice=Number(q.basePrice??0);q.maxQty=q.maxQty||20;q.allowNote=q.allowNote!==false;q.options=q.options||[];}
+  if(type==='items'){q.itemMode='product';q.basePrice=Number(q.basePrice??0);q.maxQty=q.maxQty||10;q.allowNote=q.allowNote!==false;q.options=q.options||[];}
   else {delete q.itemMode;delete q.basePrice;delete q.allowNote;}
   if(['single','multi','dropdown'].includes(type)&&!q.options.length)q.options=[{id:'o'+Math.random().toString(36).slice(2,8),label:'選項一',price:0},{id:'o'+Math.random().toString(36).slice(2,8),label:'選項二',price:0}];
   state.editDraft=draft;renderBuilder();
@@ -1006,7 +1006,7 @@ async function submitSpreadsheetDraftUi(){
   try{
     const r=await api('createSpreadsheetSurveyDraft',state.token,name);
     toast(r.message||'已建立試算表草稿');
-    showModal(`<h3>已建立試算表草稿</h3><div class="notice success">${esc(r.message||'草稿已建立。')}</div><p><b>${esc(r.name)}</b></p><p class="small muted">請在題目工作表第 6 列開始填寫題目；商品的主商品價格也填在題目工作表。共用客製化請另外到客製化工作表填寫。</p><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
+    showModal(`<h3>已建立試算表草稿</h3><div class="notice success">${esc(r.message||'草稿已建立。')}</div><p><b>${esc(r.name)}</b></p><p class="small muted">請在題目工作表第 6 列開始填寫；題目順序依題目起始列由上而下排列，不必填順序數字。同一題的選項列請接在題目列後面。選擇題型時，必填自動填「否」；商品主商品數量上限自動填 10，備註預設允許。商品價格填在題目工作表；客製化請到另一張工作表。</p><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){toast('建立草稿失敗：'+err.message)}finally{setBusy(false)}
 }
 
@@ -1020,12 +1020,21 @@ async function loadSurveyToSpreadsheet(id){
     const list=await api('listSpreadsheetSurveyDrafts',state.token);
     writeSheetDraftCache(list);
     renderSheetDraftManager(list);
-    showModal(`<h3>已建立既有問卷修改草稿</h3><div class="notice success">${esc(r.message)}</div><p>原問卷：<b>${esc(r.title)}</b><br>目前狀態：${esc(r.status)}<br>歷史回覆：${Number(r.responseCount||0)} 份</p><div class="notice">請修改這份草稿的題目及客製化工作表。完成後回到「試算表草稿管理」，按這份草稿的「更新原問卷」。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
+    showModal(`<h3>已建立既有問卷修改草稿</h3><div class="notice success">${esc(r.message)}</div><p>原問卷：<b>${esc(r.title)}</b><br>目前狀態：${esc(r.status)}<br>歷史回覆：${Number(r.responseCount||0)} 份</p><div class="notice">題目順序依題目起始列由上而下排列，不必填順序數字；同一題的選項列請接在題目列後面。選擇題型時，必填自動填「否」；商品主商品數量上限自動填 10，備註預設允許。請修改題目及客製化工作表，完成後回到草稿管理按「更新原問卷」。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){toast('建立修改草稿失敗：'+err.message)}finally{setBusy(false)}
+}
+
+function showPersistentImportError(message,importCompleted=false){
+  const title=importCompleted?'匯入已完成，但草稿清單更新失敗':'匯入／更新問卷失敗';
+  const intro=importCompleted
+    ?'正式問卷已經完成更新；錯誤發生在更新後重新讀取草稿清單的階段。請勿因為這個訊息而重複匯入。'
+    :'系統未能完成匯入／更新。請先查看下方錯誤內容，修正試算表後再重新操作。這則訊息會一直保留，直到你按下按鈕。';
+  showModal(`<h3>${title}</h3><div class="notice error" style="margin:10px 0 12px">${esc(intro)}</div><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:42vh;overflow:auto"><b>錯誤詳細內容：</b>\n${esc(String(message||'未提供錯誤細節'))}</div><p class="small muted">錯誤訊息不會自動消失。請依照內容修正工作表，再重新匯入。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">返回草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉錯誤訊息</button></div>`,{dismissBackdrop:false});
 }
 
 async function importSpreadsheetSurveyDraft(draftId){
   setBusy(true,'正在讀取試算表並檢查匯入內容…');
+  let importCompleted=false;
   try{
     const preview=await api('previewSurveySheetImport',state.token,draftId);
     let message='';
@@ -1037,12 +1046,19 @@ async function importSpreadsheetSurveyDraft(draftId){
     }
     if(!confirm(message))return;
     const r=await api('importSurveyFromSheet',state.token,draftId);
+    importCompleted=true;
     toast(r.message||'匯入完成');
     await loadAdmin({preserveTab:true});
-    const list=await api('listSpreadsheetSurveyDrafts',state.token);
-    writeSheetDraftCache(list);
-    renderSheetDraftManager(list);
-  }catch(err){toast('匯入／更新失敗：'+err.message)}finally{setBusy(false)}
+    try{
+      const list=await api('listSpreadsheetSurveyDrafts',state.token);
+      writeSheetDraftCache(list);
+      renderSheetDraftManager(list);
+    }catch(refreshError){
+      showPersistentImportError(refreshError.message,true);
+    }
+  }catch(err){
+    showPersistentImportError(err&&err.message?err.message:String(err),importCompleted);
+  }finally{setBusy(false)}
 }
 
 async function deleteSpreadsheetSurveyDraftUi(draftId){
