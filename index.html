@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.27.0">
+  <meta name="jq-pwa-version" content="10.29.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -452,7 +452,7 @@ function registerCloudFailure(method,args,message){
   state.cloudReadOnlyMode=true;
   state.cloudFailureDismissed=false;
   state.cloudFailureVersion=(Number(state.cloudFailureVersion)||0)+1;
-  state.lastCloudFailure={method:String(method||''),category:category.code,title:category.title,action:category.action,message:String(message||'未提供錯誤內容'),occurredAt:new Date().toISOString(),appVersion:'10.27.0',bridgeReady:!!(state.bridgeReady&&state.bridgePort),online:typeof navigator!=='undefined'?navigator.onLine:null,argCount:Array.isArray(args)?args.length:0};
+  state.lastCloudFailure={method:String(method||''),category:category.code,title:category.title,action:category.action,message:String(message||'未提供錯誤內容'),occurredAt:new Date().toISOString(),appVersion:'10.29.0',bridgeReady:!!(state.bridgeReady&&state.bridgePort),online:typeof navigator!=='undefined'?navigator.onLine:null,argCount:Array.isArray(args)?args.length:0};
   renderCloudFailurePanel();
   setStatus('雲端狀態尚未確認，已啟用唯讀保護',false);
 }
@@ -1157,7 +1157,7 @@ function renderSheetDraftManager(data,options={}){
     return `<div class="survey-card draft-survey-card"><div class="draft-survey-head"><div class="draft-survey-title"><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted draft-survey-mode">${esc(modeLabel)}</div></div><div class="draft-survey-status"><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}${statusNote}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><button class="btn btn-secondary btn-block draft-batch-button" ${disabled||orphaned||d.status==='IMPORTED_NEW'?'disabled':''} onclick="batchAddProductQuestionsUi('${esc(d.draftId)}')">＋ 批次新增商品題目</button><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
   }).join(''):(loading?'<div class="notice">正在從雲端讀取草稿清單……</div>':'<div class="notice">目前沒有試算表草稿。按上方「新增試算表草稿」，即可開始設計第一份。</div>');
   const migrationWarnings=Array.isArray(data&&data.migrationWarnings)?data.migrationWarnings:[];const migrationNotice=migrationWarnings.length?`<div class="notice" style="margin-bottom:12px;white-space:pre-wrap"><b>部分舊草稿格式未能自動升級：</b>\n${esc(migrationWarnings.join('\n'))}\n原有工作表及資料均保留，請先檢查相關草稿。</div>`:'';const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px;white-space:pre-wrap">${esc(options.error)}<div class="btn-row" style="margin-top:9px"><button class="btn btn-secondary" onclick="openSheetDraftManager()">重新讀取</button><button class="btn btn-secondary" onclick="useCachedDataAfterCloudFailure()">使用上次資料</button><button class="btn btn-plain" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button><button class="btn btn-plain" onclick="copyCloudFailureDetails()">複製錯誤資訊</button></div></div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:migrationNotice;
-  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><div class="btn-row"><button class="btn btn-primary" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button><button class="btn btn-secondary" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button></div>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：所有問卷 → 編輯問卷 → 試算表編輯 → 修改工作表 → 檢查並更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
+  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><div class="btn-row"><button class="btn btn-primary" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button></div>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：所有問卷 → 編輯問卷 → 試算表編輯 → 修改工作表 → 檢查並更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
 }
 
 async function batchAddProductQuestionsUi(draftId){
@@ -1298,13 +1298,22 @@ async function importSpreadsheetSurveyDraft(draftId){
 async function deleteSpreadsheetSurveyDraftUi(draftId){
   if(!confirm('確定清除這份試算表草稿？\n\n如果工作表已被手動刪除，系統也會一併清除殘留的草稿紀錄；只處理選取的草稿，不會刪除正式問卷或任何回覆。'))return;
   setBusy(true,'正在刪除所選草稿及其工作表…');
+  let deleteCompleted=false;
   try{
     const r=await api('deleteSpreadsheetSurveyDraft',state.token,draftId);
-    toast(r.message||'草稿已刪除');
-    const list=await api('listSpreadsheetSurveyDrafts',state.token);
-    writeSheetDraftCache(list);
-    renderSheetDraftManager(list);
-  }catch(err){toast('刪除草稿失敗：'+err.message)}finally{setBusy(false)}
+    deleteCompleted=true;
+    try{
+      const list=await api('listSpreadsheetSurveyDrafts',state.token);
+      writeSheetDraftCache(list);
+      renderSheetDraftManager(list);
+      toast(r.message||'草稿已刪除');
+    }catch(refreshError){
+      // 刪除 API 已成功時，後續清單刷新失敗不得誤報為刪除失敗。
+      showModal(`<h3>草稿已刪除</h3><div class="notice success">${esc(r.message||'所選草稿索引及可安全刪除的工作表已清除。')}</div><div class="notice error" style="white-space:pre-wrap">但重新讀取最新草稿清單時發生錯誤：\n${esc(refreshError.message||String(refreshError))}\n\n請按重新讀取確認雲端結果；不要重複刪除。</div><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">重新讀取草稿清單</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+    }
+  }catch(err){
+    toast((deleteCompleted?'草稿已刪除，但後續處理發生問題：':'刪除草稿失敗：')+err.message);
+  }finally{setBusy(false)}
 }
 
 // 舊版按鈕名稱相容：新版統一導向多問卷草稿管理，不再操作共用單一範本。
