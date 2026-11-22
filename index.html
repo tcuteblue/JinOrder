@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.26.0">
+  <meta name="jq-pwa-version" content="10.27.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -34,6 +34,15 @@
     .draft-card-actions>.btn:focus-visible{outline:3px solid #e2ad27;outline-offset:3px}
     .cloud-activity{position:fixed;top:calc(9px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;width:min(560px,calc(100% - 24px));padding:10px 12px;border:1px solid #dceaf5;border-radius:12px;background:#f4f9ff;color:#355c78;font-size:13px;line-height:1.45;box-shadow:0 5px 18px #355c7828;z-index:900}
     .cloud-activity.hidden{display:none!important}
+    .cloud-failure-panel{margin:10px 0 14px;padding:14px;border:1px solid #e7b6ad;border-radius:15px;background:#fff4f1;color:#743d34;box-shadow:0 5px 18px #7a3f3020;line-height:1.55}
+    .cloud-failure-panel.hidden{display:none!important}
+    .cloud-failure-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:900}
+    .cloud-failure-detail{font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap;margin:5px 0 10px}
+    .cloud-failure-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .cloud-failure-actions .btn{width:100%;min-width:0;min-height:42px;white-space:normal}
+    .cloud-readonly-note{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff0c9;color:#725315;font-size:13px}
+    @media(max-width:420px){.cloud-failure-actions{grid-template-columns:1fr}}
+
     .cloud-spinner{width:16px;height:16px;flex:none;border:2px solid #b7d5e9;border-top-color:#347fae;border-radius:50%;animation:jqspin .8s linear infinite}
     .busy-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(38,32,23,.40);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
     .busy-overlay.hidden{display:none!important}
@@ -214,6 +223,7 @@
     <div class="install-strip" id="installStrip"><button class="install-btn" id="installBtn" type="button">📲 安裝為 APP</button></div>
     <div id="syncStatus" class="sync-status" role="status" aria-live="polite"></div>
     <div id="cloudActivity" class="cloud-activity hidden" role="status" aria-live="polite"><span class="cloud-spinner" aria-hidden="true"></span><span id="cloudActivityText">正在與雲端連線…</span></div>
+    <div id="cloudFailurePanel" class="cloud-failure-panel hidden" role="alert" aria-live="assertive"></div>
     <main id="main" aria-live="polite"></main>
     <div class="footer">真好點問卷系統 ・ 問卷設計與資料整理</div>
   </div>
@@ -277,7 +287,8 @@ const state = {
   publicData:initialPublicCache, surveys:initialPublicCache?initialPublicCache.surveys:[], hasLoadedPublic:false, cloudUnavailable:false, cloudMessage:'', admin:!!rememberedAdminToken, token:rememberedAdminToken, adminTab:'surveys',
   activeSurvey:null, editingResponse:null, identity:readRememberedIdentity(), lookupSurveyId:'',
   adminOverview:null, adminSurvey:null, adminResponses:[], editSurveyId:'',
-  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0
+  logoClicks:0, logoTimer:null, bridgeReady:false, bridgePort:null, bridgePending:new Map(), bridgeNonce:'', requestNo:0,
+  cloudReadOnlyMode:false, lastCloudFailure:null, cloudFailureDismissed:false, cloudFailureVersion:0
 };
 let deferredInstallPrompt = null;
 const $ = id => document.getElementById(id);
@@ -300,7 +311,7 @@ function toast(message){const el=$('toast');el.textContent=message;el.classList.
 const CLOUD_ACTIVITY_LABELS={
   getPublicData:'正在讀取公開問卷清單…',getPublicSurvey:'正在讀取問卷內容…',submitResponse:'正在送出問卷回覆…',editMyResponse:'正在儲存回覆修改…',lookupMyResponse:'正在查詢你的歷史回覆…',
   loginAdmin:'正在驗證管理者登入…',logoutAdmin:'正在安全結束管理者登入…',getAdminOverview:'正在讀取管理中心資料…',getAdminSurvey:'正在讀取問卷回覆及統計…',saveSurvey:'正在儲存問卷設定…',createSurvey:'正在建立新問卷及結果工作表…',setSurveyStatus:'正在更新問卷開放狀態…',copySurvey:'正在複製問卷及建立工作表…',deleteSurvey:'正在備份並刪除問卷…',
-  listSpreadsheetSurveyDrafts:'正在讀取試算表草稿清單…',createSpreadsheetSurveyDraft:'正在建立草稿及兩張設計工作表…',loadSurveyToSpreadsheetDraft:'正在複製既有問卷到專屬修改草稿…',previewSurveySheetImport:'正在讀取試算表並檢查題目…',importSurveyFromSheet:'正在備份並匯入／更新問卷…',deleteSpreadsheetSurveyDraft:'正在刪除所選草稿工作表…',
+  listSpreadsheetSurveyDrafts:'正在讀取試算表草稿清單…',inspectAndRepairSpreadsheetDrafts:'正在檢查草稿索引及修復幽靈草稿…',createSpreadsheetSurveyDraft:'正在建立草稿及兩張設計工作表…',loadSurveyToSpreadsheetDraft:'正在複製既有問卷到專屬修改草稿…',previewSurveySheetImport:'正在讀取試算表並檢查題目…',importSurveyFromSheet:'正在備份並匯入／更新問卷…',deleteSpreadsheetSurveyDraft:'正在刪除所選草稿工作表…',
   listBackups:'正在讀取雲端備份清單…',previewBackup:'正在讀取備份內容…',restoreBackup:'正在保護目前資料並執行還原…',backupNow:'正在建立完整雲端備份…',saveBackupSettings:'正在儲存雲端備份設定…',changeAdminPassword:'正在更新管理者密碼…',exportSurveyXlsx:'正在整理回覆並產生 Excel…',adminUpdateResponse:'正在儲存管理者修改的回覆…'
 };
 const cloudActivityTasks=new Map();let cloudActivitySeq=0;
@@ -418,20 +429,139 @@ function handleBridgePortMessage(event){
     if(data.ok)pending.resolve(data.result);else pending.reject(new Error(data.error||'雲端服務發生錯誤'));
   }
 }
+const CLOUD_AUTH_APIS=new Set(['loginAdmin','logoutAdmin']);
+const CLOUD_READ_APIS=new Set(['getPublicData','getPublicSurvey','getAdminOverview','getAdminSurvey','lookupMyResponse','listSpreadsheetSurveyDrafts','getSurveyDesignTemplate','listBackups','previewBackup','previewSurveySheetImport']);
+const CLOUD_WRITE_APIS=new Set(['submitResponse','editMyResponse','createSurvey','copySurvey','deleteSurvey','saveSurvey','setSurveyStatus','adminUpdateResponse','changeAdminPassword','saveBackupSettings','backupNow','restoreBackup','exportSurveyXlsx','createSpreadsheetSurveyDraft','batchAddProductQuestions','loadSurveyToSpreadsheetDraft','deleteSpreadsheetSurveyDraft','loadSurveyIntoDesignTemplate','resetSurveyDesignTemplate','importSurveyFromSheet','inspectAndRepairSpreadsheetDrafts']);
+function classifyCloudFailure(method,message){
+  const m=String(message||'');
+  if(/\[JQ_CODE:LOCK_BUSY\]|執行鎖|鎖定.*逾時|正在處理另一項/.test(m))return {code:'LOCK_BUSY',title:'雲端目前正在處理其他作業',action:'等待目前作業完成後重新嘗試'};
+  if(/\[JQ_CODE:DEPLOYMENT\]|不允許的 API 呼叫|後端部署版本未包含|API.*不存在/.test(m))return {code:'DEPLOYMENT',title:'前後端部署版本不一致',action:'確認 GAS 已更新並部署最新版本'};
+  if(/管理者登入已逾期|管理者登入已失效|請重新登入/.test(m))return {code:'SESSION',title:'管理者登入憑證已失效',action:'重新登入管理者'};
+  if(/權限不足|沒有權限|permission|authorization|Access denied|存取遭拒/i.test(m))return {code:'PERMISSION',title:'Google 試算表或 GAS 權限不足',action:'檢查目前管理者帳號的試算表權限及 GAS 部署存取權'};
+  if(/草稿.*工作表.*不存在|幽靈草稿|草稿索引.*不正確|索引.*找不到|工作表.*不存在/.test(m))return {code:'DRAFT_INTEGRITY',title:'試算表草稿索引與工作表不一致',action:'執行草稿檢查及修復'};
+  if(/逾時|timeout|timed out|未在期限|未收到回應|沒有回應/i.test(m))return {code:'TIMEOUT',title:'雲端連線或服務回應逾時',action:'重新讀取雲端資料；不要重複送出寫入操作'};
+  if(/橋接|安全通道|GAS.*載入|網路|連線尚未就緒|無法載入|MessageChannel|script\.googleusercontent/i.test(m))return {code:'CONNECTION',title:'雲端連線尚未建立或中斷',action:'檢查網路並重新建立連線'};
+  if(CLOUD_READ_APIS.has(method))return {code:'READ_FAILED',title:'雲端資料讀取失敗',action:'重新讀取；若持續失敗，複製診斷資訊'};
+  if(CLOUD_AUTH_APIS.has(method))return {code:'AUTH_SERVICE',title:'管理者驗證服務未能完成',action:'確認網路及 GAS 部署後，重新嘗試登入或結束登入'};
+  if(CLOUD_WRITE_APIS.has(method)&&!/請先|請輸入|請填寫|格式不正確|至少需要|超出範圍|必須設定|不可空白|不能為空|已經存在|找不到要|未填寫|需要一個選項/.test(m))return {code:'SERVER_ERROR',title:'雲端作業未能完成',action:'先確認雲端結果，不要立即重複執行'};
+  return null;
+}
+function registerCloudFailure(method,args,message){
+  const category=classifyCloudFailure(method,message);
+  if(!category)return;
+  state.cloudReadOnlyMode=true;
+  state.cloudFailureDismissed=false;
+  state.cloudFailureVersion=(Number(state.cloudFailureVersion)||0)+1;
+  state.lastCloudFailure={method:String(method||''),category:category.code,title:category.title,action:category.action,message:String(message||'未提供錯誤內容'),occurredAt:new Date().toISOString(),appVersion:'10.27.0',bridgeReady:!!(state.bridgeReady&&state.bridgePort),online:typeof navigator!=='undefined'?navigator.onLine:null,argCount:Array.isArray(args)?args.length:0};
+  renderCloudFailurePanel();
+  setStatus('雲端狀態尚未確認，已啟用唯讀保護',false);
+}
+function clearCloudFailure(){
+  state.cloudReadOnlyMode=false;
+  state.lastCloudFailure=null;
+  state.cloudFailureDismissed=false;
+  renderCloudFailurePanel();
+}
+function renderCloudFailurePanel(){
+  const el=$('cloudFailurePanel');if(!el)return;
+  const f=state.lastCloudFailure;
+  if(!f||state.cloudFailureDismissed){el.classList.add('hidden');el.innerHTML='';return;}
+  const isDraft=f.category==='DRAFT_INTEGRITY'||f.method==='listSpreadsheetSurveyDrafts'||f.method==='deleteSpreadsheetSurveyDraft'||f.method==='inspectAndRepairSpreadsheetDrafts';
+  const writeUncertain=CLOUD_WRITE_APIS.has(f.method);
+  el.innerHTML=`<div class="cloud-failure-head"><span aria-hidden="true">⚠️</span><span>${esc(f.title)}</span></div><div class="cloud-failure-detail">${esc(f.message)}</div><div class="cloud-readonly-note">${writeUncertain?'這次操作可能未完成或回應遺失。為避免重複新增、刪除或覆蓋，系統暫停雲端寫入；請先確認雲端結果。':'目前只保留上次成功讀取的資料。確認雲端恢復前，會暫停新增、刪除、匯入、更新及還原。'}</div><div class="cloud-failure-actions"><button class="btn btn-primary" onclick="retryCloudFailure()">${writeUncertain?'確認雲端結果':'重新連線／讀取'}</button><button class="btn btn-secondary" onclick="useCachedDataAfterCloudFailure()">使用上次資料（唯讀）</button>${f.category==='SESSION'?'<button class="btn btn-secondary" onclick="reauthenticateFromCloudFailure()">重新登入管理者</button>':''}${state.admin?'<button class="btn btn-secondary" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button>':''}<button class="btn btn-plain" onclick="viewCloudFailureSteps()">查看處理方法</button><button class="btn btn-plain" onclick="copyCloudFailureDetails()">複製錯誤資訊</button></div>`;
+  el.classList.remove('hidden');
+}
+function useCachedDataAfterCloudFailure(){
+  state.cloudFailureDismissed=true;
+  state.cloudReadOnlyMode=true;
+  renderCloudFailurePanel();
+  setStatus('目前使用上次資料（唯讀模式）',false);
+  const cachedDrafts=readSheetDraftCache();
+  const modalText=$('modalRoot')?.innerText||'';
+  if(cachedDrafts&&/試算表草稿管理/.test(modalText))renderSheetDraftManager(cachedDrafts,{error:'目前使用上次成功讀取的草稿清單（唯讀）。雲端最新狀態尚未確認，因此新增、刪除及匯入功能暫停。'});
+  else if(state.admin&&state.adminOverview)renderAdmin();
+  else if(state.publicData)renderHome();
+  toast('已切換為上次資料唯讀模式；重新連線成功後才會恢復雲端操作。');
+}
+async function retryCloudFailure(){
+  const f=state.lastCloudFailure;
+  if(!state.bridgeReady||!state.bridgePort){window.location.reload();return;}
+  if(f&&CLOUD_WRITE_APIS.has(f.method)){
+    // 寫入結果不明時不重送原指令，只重新讀取正式問卷及草稿狀態。
+    if(state.admin){await loadAdmin({preserveTab:true});try{const list=await api('listSpreadsheetSurveyDrafts',state.token);writeSheetDraftCache(list);if(($('modalRoot')?.innerText||'').includes('試算表草稿管理'))renderSheetDraftManager(list);}catch(e){}} 
+    else await loadPublic();
+    return;
+  }
+  if(f&&f.method==='listSpreadsheetSurveyDrafts'){openSheetDraftManager();return;}
+  if(state.admin)await loadAdmin({preserveTab:true});else await loadPublic();
+}
+function reauthenticateFromCloudFailure(){
+  clearAdminSession();
+  state.cloudFailureDismissed=true;renderCloudFailurePanel();
+  adminLoginDialog();
+}
+function viewCloudFailureSteps(){
+  const f=state.lastCloudFailure;if(!f)return;
+  const instructions={
+    LOCK_BUSY:'請先停止其他裝置正在執行的建立草稿、匯入、備份或還原。等待該作業結束後，再按「重新連線／讀取」。不要連續重複點擊。',
+    DEPLOYMENT:'請檢查 GAS 是否已貼上新版 Code.gs，並在「部署 → 管理部署作業」編輯原本的網頁應用程式、選擇新增版本。保留原本 /exec 網址及存取權。',
+    SESSION:'請重新登入管理者。重新登入成功後再重試原本的操作。',
+    AUTH_SERVICE:'管理者驗證服務暫時沒有正常回應。請先確認網路及 GAS 部署，再重新嘗試登入；如果持續失敗，複製錯誤資訊供維護人員查詢。',
+    PERMISSION:'請確認目前管理者使用的 Google 帳號有權限開啟「真好點問卷結果」試算表及其 Apps Script。若最近更換部署，請檢查網頁應用程式的執行身分與存取權。',
+    DRAFT_INTEGRITY:'請按「檢查及修復草稿」。系統只會清除題目及客製化兩張工作表都不存在的幽靈索引；只缺一張或未登記的工作表會列出，不會擅自刪除。',
+    TIMEOUT:'先確認網路穩定，再按「確認雲端結果」。若剛才是新增、刪除或更新，系統會先重新讀取狀態，不會直接重送同一個寫入指令。',
+    CONNECTION:'確認網路可以正常連線，重新整理 GitHub Pages。若 GAS 部署被改動，請確認 /exec 網址、部署版本及存取權。',
+    READ_FAILED:'先按「重新連線／讀取」。如果還是失敗，按「複製錯誤資訊」並把內容提供給維護人員，以便依照錯誤代碼查詢。',
+    SERVER_ERROR:'這次雲端作業可能未完成。先按「確認雲端結果」重新讀取正式問卷及草稿清單，確認結果前不要重複執行新增、刪除或更新。'
+  };
+  showModal(`<h3>${esc(f.title)}</h3><div class="notice" style="white-space:pre-wrap">${esc(instructions[f.category]||f.action||'請先重新讀取雲端狀態，再依錯誤內容處理。')}</div><p class="tiny muted">錯誤代碼：${esc(f.category)}<br>操作：${esc(f.method)}</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="closeModal();retryCloudFailure()">重新確認雲端</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+}
+
+async function copyCloudFailureDetails(){
+  const f=state.lastCloudFailure;if(!f){toast('目前沒有雲端錯誤資訊');return;}
+  const textValue=[
+    '真好點問卷系統雲端診斷',
+    '版本：'+f.appVersion,
+    '發生時間：'+f.occurredAt,
+    '操作：'+f.method,
+    '錯誤分類：'+f.category,
+    '錯誤原因：'+f.message,
+    '橋接通道：'+(f.bridgeReady?'已建立':'未建立'),
+    '瀏覽器網路狀態：'+(f.online===null?'未知':(f.online?'online':'offline')),
+    '參數數量：'+f.argCount
+  ].join('\n');
+  try{if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(textValue);else throw new Error('clipboard unavailable');toast('錯誤資訊已複製');}
+  catch(e){const ta=document.createElement('textarea');ta.value=textValue;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('錯誤資訊已複製');}catch(err){showModal(`<h3>錯誤資訊</h3><textarea class="textarea" readonly>${esc(textValue)}</textarea><button class="btn btn-primary btn-block" onclick="closeModal()">關閉</button>`);}ta.remove();}
+}
+
 function api(method,...args){
   return new Promise((resolve,reject)=>{
+    const failureVersionAtStart=Number(state.cloudFailureVersion)||0;
+    if(state.cloudReadOnlyMode&&CLOUD_WRITE_APIS.has(method)&&method!=='inspectAndRepairSpreadsheetDrafts'){
+      const err=new Error('目前使用上次成功讀取的資料，為避免覆蓋雲端最新資料，這項新增、刪除、匯入、更新或還原操作暫停。請先重新連線並確認雲端狀態。');
+      reject(err);return;
+    }
     if(!state.bridgeReady||!state.bridgePort){
-      setStatus('雲端尚未連線，請稍候再試或重新連線。',false);
-      reject(new Error('雲端連線尚未就緒，請稍候或重新整理。'));return;
+      const err=new Error('雲端連線尚未就緒，請稍候或重新整理。');
+      registerCloudFailure(method,args,err.message);
+      reject(err);return;
     }
     const id='r'+(++state.requestNo)+'_'+Date.now();
     const endActivity=beginCloudActivity(method);
-    const timer=setTimeout(()=>{state.bridgePending.delete(id);endActivity();reject(new Error('雲端回應逾時，請稍後再試。'));},45000);
-    state.bridgePending.set(id,{resolve,reject,timer,endActivity});
+    const timer=setTimeout(()=>{
+      const pending=state.bridgePending.get(id);state.bridgePending.delete(id);endActivity();
+      const err=new Error('[JQ_CODE:TIMEOUT] 雲端回應逾時（45 秒）。如果這是新增、刪除或更新操作，請先按「確認雲端結果」，不要立即重送。');
+      registerCloudFailure(method,args,err.message);reject(err);
+    },45000);
+    state.bridgePending.set(id,{
+      resolve:result=>{clearTimeout(timer);endActivity();if((Number(state.cloudFailureVersion)||0)===failureVersionAtStart)clearCloudFailure();resolve(result);},
+      reject:error=>{clearTimeout(timer);endActivity();registerCloudFailure(method,args,error&&error.message?error.message:String(error));reject(error);},
+      timer,endActivity
+    });
     try{
       state.bridgePort.postMessage({channel:CHANNEL,nonce:state.bridgeNonce,type:'request',id,method,args});
     }catch(err){
-      clearTimeout(timer);state.bridgePending.delete(id);endActivity();reject(err);
+      clearTimeout(timer);state.bridgePending.delete(id);endActivity();registerCloudFailure(method,args,err.message||String(err));reject(err);
     }
   });
 }
@@ -514,11 +644,12 @@ function renderBridgeSetup(){
 function renderError(message){$('main').innerHTML=`<section class="hero"><h2>雲端連線暫時中斷</h2><p>請確認網路及 GAS 部署設定。</p></section><div class="card"><div class="notice error">${esc(message)}</div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="loadPublic()">重新連線</button></div>`}
 
 function retryCloudConnection(){
-  if(state.bridgeReady&&state.bridgePort){loadPublic();return;}
+  if(state.bridgeReady&&state.bridgePort){if(state.admin)loadAdmin({preserveTab:true});else loadPublic();return;}
   // 安全通道尚未建立時，重新載入頁面會重新建立 nonce 與 MessageChannel。
   window.location.reload();
 }
 function showCloudUnavailable(message){
+  registerCloudFailure('getPublicData',[],message);
   state.cloudUnavailable=true;
   state.cloudMessage=String(message||'雲端資料暫時無法讀取。');
   setStatus(state.publicData?'暫時無法同步，先顯示上次資料':'雲端連線暫時中斷',false);
@@ -1003,7 +1134,7 @@ function openSheetDraftManager(){
     if(cached){
       renderSheetDraftManager(cached,{error:'目前無法確認雲端最新狀態，以下是上次成功讀取的清單。請確認網路後重新開啟草稿管理。'});
     }else{
-      showModal(`<h3>試算表草稿管理</h3><button class="btn btn-primary btn-block" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button><div class="notice error" style="margin-top:12px">無法讀取試算表草稿：${esc(err.message)}<br><br>請確認網路連線後重新開啟。</div><div class="btn-row" style="margin-top:12px"><button class="btn btn-secondary" onclick="openSheetDraftManager()">重新讀取</button><button class="btn btn-plain" onclick="closeModal()">完成</button></div>`);
+      showModal(`<h3>試算表草稿管理</h3><div class="btn-row"><button class="btn btn-primary" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button><button class="btn btn-secondary" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button></div><div class="notice error" style="margin-top:12px;white-space:pre-wrap">無法讀取試算表草稿：${esc(err.message)}<br><br>目前無法確認雲端最新狀態。你可以重新讀取、使用上次清單（唯讀），或檢查草稿索引。</div><div class="btn-row" style="margin-top:12px"><button class="btn btn-secondary" onclick="openSheetDraftManager()">重新讀取</button><button class="btn btn-secondary" onclick="useCachedDataAfterCloudFailure()">使用上次資料</button><button class="btn btn-plain" onclick="copyCloudFailureDetails()">複製錯誤資訊</button></div><button class="btn btn-plain btn-block" onclick="closeModal()">完成</button>`);
     }
   });
 }
@@ -1011,7 +1142,7 @@ function openSheetDraftManager(){
 function renderSheetDraftManager(data,options={}){
   const drafts=Array.isArray(data&&data.drafts)?data.drafts:[];
   const loading=!!options.loading;
-  const disableActions=loading||!!options.error;
+  const disableActions=loading||!!options.error||state.cloudReadOnlyMode;
   const disabled=disableActions?'disabled':'';
   const cards=drafts.length?drafts.map(d=>{
     const modeLabel=d.mode==='EDIT'?'修改既有問卷':'新問卷草稿';
@@ -1025,8 +1156,8 @@ function renderSheetDraftManager(data,options={}){
     const metaWarning=orphaned?`<br><span class="draft-missing-note">${esc((d.missingSheets||[]).join('、')||'部分工作表')}已被移除；此筆只能清除草稿紀錄。</span>`:'';
     return `<div class="survey-card draft-survey-card"><div class="draft-survey-head"><div class="draft-survey-title"><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted draft-survey-mode">${esc(modeLabel)}</div></div><div class="draft-survey-status"><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}${statusNote}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><button class="btn btn-secondary btn-block draft-batch-button" ${disabled||orphaned||d.status==='IMPORTED_NEW'?'disabled':''} onclick="batchAddProductQuestionsUi('${esc(d.draftId)}')">＋ 批次新增商品題目</button><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
   }).join(''):(loading?'<div class="notice">正在從雲端讀取草稿清單……</div>':'<div class="notice">目前沒有試算表草稿。按上方「新增試算表草稿」，即可開始設計第一份。</div>');
-  const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px">${esc(options.error)}</div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:'';
-  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><button class="btn btn-primary btn-block" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：所有問卷 → 編輯問卷 → 試算表編輯 → 修改工作表 → 檢查並更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
+  const migrationWarnings=Array.isArray(data&&data.migrationWarnings)?data.migrationWarnings:[];const migrationNotice=migrationWarnings.length?`<div class="notice" style="margin-bottom:12px;white-space:pre-wrap"><b>部分舊草稿格式未能自動升級：</b>\n${esc(migrationWarnings.join('\n'))}\n原有工作表及資料均保留，請先檢查相關草稿。</div>`:'';const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px;white-space:pre-wrap">${esc(options.error)}<div class="btn-row" style="margin-top:9px"><button class="btn btn-secondary" onclick="openSheetDraftManager()">重新讀取</button><button class="btn btn-secondary" onclick="useCachedDataAfterCloudFailure()">使用上次資料</button><button class="btn btn-plain" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button><button class="btn btn-plain" onclick="copyCloudFailureDetails()">複製錯誤資訊</button></div></div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:migrationNotice;
+  showModal(`<h3>試算表草稿管理</h3><p class="small muted">每份草稿都有自己的題目工作表及商品客製化工作表。編輯內容會由 Google 試算表自動保存；完成後只匯入你選擇的那一份。</p><div class="btn-row"><button class="btn btn-primary" onclick="createSpreadsheetDraftUi()">＋ 新增試算表草稿</button><button class="btn btn-secondary" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button></div>${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新問卷：建立草稿 → 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：所有問卷 → 編輯問卷 → 試算表編輯 → 修改工作表 → 檢查並更新原問卷。<br>每份草稿互相獨立，不會因開啟另一份而被覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
 }
 
 async function batchAddProductQuestionsUi(draftId){
@@ -1045,6 +1176,25 @@ async function submitBatchAddProductQuestionsUi(draftId){
     showModal(`<h3>批次新增完成</h3><div class="notice success">${esc(r.message||'商品題目已新增。')}</div><p>新增位置：第 ${Number(r.startRow||6)}～${Number(r.endRow||5)} 列。</p><p class="small muted">請開啟題目工作表，填入每個商品的名稱及主商品單價。題號與商品序號會自動顯示。</p><div class="sheet-modal-actions"><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){showModal(`<h3>批次新增商品失敗</h3><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err.message||String(err))}</div><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">返回草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);}
   finally{setBusy(false)}
+}
+
+async function repairSpreadsheetDraftsUi(){
+  if(!state.admin||!state.token){toast('請先登入管理者');return;}
+  showModal(`<h3>檢查及修復雲端草稿</h3><div class="notice">系統會檢查草稿索引與 Google 試算表工作表是否一致。只有題目及客製化兩張工作表都不存在的幽靈索引會自動清除；只缺一張的草稿及未登記的孤立工作表只會列出，不會擅自刪除。</div><div class="notice">若需要清除幽靈索引，系統會先複製隱藏的草稿索引備份。正式問卷、JSON 設定及歷史回覆不會被修改。</div><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="runRepairSpreadsheetDraftsUi()">開始檢查及修復</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
+}
+async function runRepairSpreadsheetDraftsUi(){
+  setBusy(true,'正在檢查草稿索引、工作表及建立必要備份…');
+  try{
+    const r=await api('inspectAndRepairSpreadsheetDrafts',state.token);
+    const list=await api('listSpreadsheetSurveyDrafts',state.token);
+    writeSheetDraftCache(list);
+    const partial=(r.partialDrafts||[]).map(x=>`${x.name||x.draftId}：缺少${(x.missingSheets||[]).join('、')}`).join('\n');
+    const orphans=(r.orphanSheets||[]).map(x=>x.name).join('\n');
+    const details=[`已清除幽靈草稿索引：${Number(r.removedGhostRecords||0)} 筆`,`仍有工作表的部分草稿：${(r.partialDrafts||[]).length} 筆`,`未登記的孤立工作表：${(r.orphanSheets||[]).length} 張`,`修復後草稿紀錄：${Number(r.remainingDraftCount||0)} 筆`,r.backupSheetName?'索引保護備份：'+r.backupSheetName:''].filter(Boolean).join('\n');
+    showModal(`<h3>草稿檢查及修復完成</h3><div class="notice success" style="white-space:pre-wrap">${esc(details)}</div>${partial?`<div class="notice" style="white-space:pre-wrap"><b>不完整草稿（未刪除）：</b>\n${esc(partial)}</div>`:''}${orphans?`<div class="notice" style="white-space:pre-wrap"><b>孤立工作表（未刪除，請人工確認）：</b>\n${esc(orphans)}</div>`:''}<p class="small muted">孤立工作表及只缺一張工作表的草稿都保留原狀。系統沒有刪除任何正式問卷或回覆。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="closeModal();openSheetDraftManager()">查看最新草稿清單</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+  }catch(err){
+    showModal(`<h3>草稿檢查／修復失敗</h3><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err.message||String(err))}</div><p class="small muted">系統未完成修復，不會繼續刪除索引或工作表。可以先重新連線，再次嘗試。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="repairSpreadsheetDraftsUi()">重新嘗試</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
+  }finally{setBusy(false)}
 }
 
 async function createSpreadsheetDraftUi(){
