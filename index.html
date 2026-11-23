@@ -1155,10 +1155,11 @@ function renderSheetDraftManager(data,options={}){
     const statusNote=d.status==='IMPORTED_NEW'?'<br><span class="tiny muted">如需修改，請從正式問卷重新建立修改草稿。</span>':'';
     const importLabel=d.mode==='EDIT'?'更新原問卷':'匯入建立問卷';
     const unavailable=d.importable===false?'disabled':'';
+    const importNote=d.emptyQuestions?'<br><span class="tiny muted">尚未完成第一題；請在同一列填妥題型及題目名稱後，才能匯入／更新。</span>':'';
     const mainLink=d.mainUrl?`<a class="btn btn-secondary ${loading?'is-loading':''}" href="${esc(d.mainUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟題目工作表</a>`:`<button class="btn btn-secondary" disabled>題目工作表不存在</button>`;
     const customLink=d.customUrl?`<a class="btn btn-plain ${loading?'is-loading':''}" href="${esc(d.customUrl)}" target="_blank" rel="noopener" ${disableActions?'tabindex="-1" onclick="return false"':''}>開啟客製化工作表</a>`:`<button class="btn btn-plain" disabled>客製化工作表不存在</button>`;
     const metaWarning=orphaned?`<br><span class="draft-missing-note">${esc((d.missingSheets||[]).join('、')||'部分工作表')}已被移除；此筆只能清除草稿紀錄。</span>`:'';
-    return `<div class="survey-card draft-survey-card"><div class="draft-survey-head"><div class="draft-survey-title"><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted draft-survey-mode">${esc(modeLabel)}</div></div><div class="draft-survey-status"><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}${statusNote}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><button class="btn btn-secondary btn-block draft-batch-button" ${disabled||orphaned||d.status==='IMPORTED_NEW'?'disabled':''} onclick="batchAddProductQuestionsUi('${esc(d.draftId)}')">＋ 批次新增商品題目</button><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
+    return `<div class="survey-card draft-survey-card"><div class="draft-survey-head"><div class="draft-survey-title"><h3>${esc(d.title||d.name||'未命名草稿')}</h3><div class="tiny muted draft-survey-mode">${esc(modeLabel)}</div></div><div class="draft-survey-status"><span class="badge ${orphaned?'closed':(d.status==='IMPORTED_NEW'?'closed':'draft')}">${esc(statusLabel)}</span></div></div><div class="survey-meta">草稿工作表：${esc(d.mainSheetName)}<br>客製化工作表：${esc(d.customSheetName)}${metaWarning}${importNote}${statusNote}<br>最後編輯：${esc(dateText(d.updatedAt||d.createdAt))}</div><button class="btn btn-secondary btn-block draft-batch-button" ${disabled||orphaned||d.status==='IMPORTED_NEW'?'disabled':''} onclick="batchAddProductQuestionsUi('${esc(d.draftId)}')">＋ 批次新增商品題目</button><div class="draft-card-actions">${mainLink}${customLink}<button class="btn btn-primary" ${disabled||unavailable} onclick="importSpreadsheetSurveyDraft('${esc(d.draftId)}')">${importLabel}</button><button class="btn btn-danger" ${disabled} onclick="deleteSpreadsheetSurveyDraftUi('${esc(d.draftId)}')">${orphaned?'清除幽靈草稿':'刪除草稿'}</button></div></div>`;
   }).join(''):(loading?'<div class="notice">正在從雲端讀取草稿清單……</div>':'<div class="notice">目前沒有試算表草稿。按上方「新增試算表草稿」，即可開始設計第一份。</div>');
   const migrationWarnings=Array.isArray(data&&data.migrationWarnings)?data.migrationWarnings:[];const migrationNotice=migrationWarnings.length?`<div class="notice" style="margin-bottom:12px;white-space:pre-wrap"><b>部分舊草稿格式未能自動升級：</b>\n${esc(migrationWarnings.join('\n'))}\n原有工作表及資料均保留，請先檢查相關草稿。</div>`:'';const syncLine=options.error?`<div class="notice error" style="margin-bottom:12px;white-space:pre-wrap">${esc(options.error)}<div class="btn-row" style="margin-top:9px"><button class="btn btn-secondary" onclick="openSheetDraftManager()">重新讀取</button><button class="btn btn-secondary" onclick="useCachedDataAfterCloudFailure()">使用上次資料</button><button class="btn btn-plain" onclick="repairSpreadsheetDraftsUi()">檢查及修復草稿</button><button class="btn btn-plain" onclick="copyCloudFailureDetails()">複製錯誤資訊</button></div></div>`:loading?`<div class="draft-sync-line"><span class="draft-sync-dot"></span>${options.fromCache?'已先顯示上次清單，正在背景確認 Google 雲端最新狀態；確認完成後即可操作。':'正在連線 Google 試算表，讀取草稿清單……'}</div>`:migrationNotice;
   showModal(`<h3>試算表草稿管理</h3><p class="small muted">請依用途建立草稿。新增問卷會建立空白設計表；修改既有問卷會先選擇正式問卷，再載入該問卷內容。既有草稿會優先重用，不會覆蓋已填內容。</p>${spreadsheetDraftCreateActionsHtml(disableActions)}${syncLine}<div style="margin-top:12px">${cards}</div><div class="notice" style="margin-top:12px"><b>使用方式：</b><br>① 新增問卷：按「新增問卷草稿」→ 填寫兩張工作表 → 匯入建立問卷。<br>② 修改既有問卷：按「修改既有問卷草稿」→ 選擇正式問卷 → 開啟專屬修改草稿 → 檢查並更新原問卷。<br>也可從「所有問卷 → 編輯問卷 → 試算表編輯」進入相同的修改流程。<br>新問卷草稿與修改草稿用途不同，彼此保留，不會自動轉換或互相覆蓋。</div><button class="btn btn-plain btn-block" style="margin-top:10px" onclick="closeModal()">完成</button>`);
@@ -1202,18 +1203,21 @@ async function runRepairSpreadsheetDraftsUi(){
 }
 
 async function createSpreadsheetDraftUi(){
-  showModal(`<h3>新增問卷草稿（新問卷）</h3><p class="small muted">這個入口會建立一份全新的問卷草稿，不會連結到任何已存在的正式問卷。輸入草稿名稱後，可在試算表繼續修改。</p><div class="field"><label>新問卷名稱</label><input id="spreadsheetDraftName" class="input" maxlength="120" placeholder="例如：便當團購"></div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetDraftUi()">建立新問卷草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
-  const input=$('spreadsheetDraftName');if(input){input.focus();input.select();input.addEventListener('keydown',e=>{if(e.key==='Enter')submitSpreadsheetDraftUi()})}
+  showModal(`<h3>新增問卷草稿（新問卷）</h3><p class="small muted">這個入口會建立一份全新的問卷草稿，不會連結到任何已存在的正式問卷。請輸入草稿名稱及預先準備的空白題目列數；之後仍可直接在 Google 試算表增加更多題目列。</p><div class="field"><label>新問卷名稱</label><input id="spreadsheetDraftName" class="input" maxlength="120" placeholder="例如：便當團購"></div><div class="field"><label>預先建立幾列空白題目？（1～60 列）</label><input id="spreadsheetDraftQuestionCount" class="input" type="number" min="1" max="60" step="1" inputmode="numeric" placeholder="請輸入列數"></div><div class="notice">預留的題目列不會預設成商品題，題型及題目名稱由你自行填寫。題號、商品序號會自動計算；若題目不夠，仍可在試算表下方新增列，系統會自動補上序號公式。</div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetDraftUi()">建立新問卷草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
+  const input=$('spreadsheetDraftName');if(input){input.focus();input.addEventListener('keydown',e=>{if(e.key==='Enter')$('spreadsheetDraftQuestionCount')?.focus()});}
+  const countInput=$('spreadsheetDraftQuestionCount');if(countInput)countInput.addEventListener('keydown',e=>{if(e.key==='Enter')submitSpreadsheetDraftUi()});
 }
 
 async function submitSpreadsheetDraftUi(){
   const name=String($('spreadsheetDraftName')?.value||'').trim();
+  const questionCount=Number($('spreadsheetDraftQuestionCount')?.value);
   if(!name){toast('請輸入草稿名稱');$('spreadsheetDraftName')?.focus();return;}
-  setBusy(true,'正在建立草稿及專屬工作表…');
+  if(!Number.isInteger(questionCount)||questionCount<1||questionCount>60){toast('請輸入 1～60 的整數題目列數');$('spreadsheetDraftQuestionCount')?.focus();return;}
+  setBusy(true,'正在建立草稿及預留空白題目列…');
   try{
-    const r=await api('createSpreadsheetSurveyDraft',state.token,name);
+    const r=await api('createSpreadsheetSurveyDraft',state.token,name,questionCount);
     toast(r.message||'已建立試算表草稿');
-    showModal(`<h3>已建立新問卷草稿</h3><div class="notice success">${esc(r.message||'新問卷草稿已建立。')}</div><p><b>${esc(r.name)}</b></p><p class="small muted">請在題目工作表第 6 列開始填寫；題號及商品序號會依題型與上下排列自動顯示，不必手動輸入。同一題的選項列請接在題目列後面。選擇題型時，必填自動填「否」；商品主商品數量上限自動填 10，備註預設允許。商品價格填在題目工作表；客製化請到另一張工作表。</p><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
+    showModal(`<h3>已建立新問卷草稿</h3><div class="notice success">${esc(r.message||'新問卷草稿已建立。')}</div><p><b>${esc(r.name)}</b></p><p class="small muted">題目工作表已預留 ${Number(r.questionRowCount||questionCount)} 列空白題目，從第 6 列開始。請填寫題型及題目名稱；題號與商品序號會自動顯示。同一題的普通選項列請接在題目列後面。選擇題型時，必填自動填「否」；商品題主商品數量上限自動填 10，備註預設允許。預留列不夠時，可直接在試算表下方新增題目列。</p><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){toast('建立草稿失敗：'+err.message)}finally{setBusy(false)}
 }
 
@@ -1234,7 +1238,7 @@ async function selectSurveyForSpreadsheetDraftUi(){
     return;
   }
   const options=surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title||'未命名問卷')}（${esc(s.status||'')}）</option>`).join('');
-  showModal(`<h3>修改既有問卷草稿</h3><p class="small muted">選擇要修改的正式問卷。系統會載入目前問卷內容；若該問卷目前沒有題目，也會建立綁定原問卷的空白修改草稿，讓你從第一題開始設計。若已經有對應的修改草稿，則直接重用，不覆蓋試算表中的修改。</p><div class="field"><label>選擇正式問卷</label><select id="spreadsheetEditSurveySelect" class="select"><option value="">請選擇一份正式問卷</option>${options}</select></div><div class="notice">這個流程會建立「修改既有問卷」草稿（EDIT），不會把既有「新問卷」草稿改名或覆蓋。原問卷及歷史回覆在你確認更新前都不會變動。</div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetEditDraftSelection()">建立／開啟修改草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
+  showModal(`<h3>修改既有問卷草稿</h3><p class="small muted">選擇要修改的正式問卷。系統會載入目前問卷內容，若已經有對應的修改草稿，則直接重用原草稿，不重新載入或覆蓋試算表中的修改。</p><div class="field"><label>選擇正式問卷</label><select id="spreadsheetEditSurveySelect" class="select"><option value="">請選擇一份正式問卷</option>${options}</select></div><div class="notice">這個流程會建立「修改既有問卷」草稿（EDIT），不會把既有「新問卷」草稿改名或覆蓋。原問卷及歷史回覆在你確認更新前都不會變動。</div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetEditDraftSelection()">建立／開啟修改草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
 }
 function submitSpreadsheetEditDraftSelection(){
   const id=String($('spreadsheetEditSurveySelect')?.value||'').trim();
@@ -1254,7 +1258,7 @@ async function loadSurveyToSpreadsheet(id){
     api('listSpreadsheetSurveyDrafts',state.token).then(list=>writeSheetDraftCache(list)).catch(err=>console.warn('背景更新草稿清單略過：',err));
     const reuseNote=r.reused
       ?'已找到這份問卷原本的修改草稿，直接開啟原草稿。你先前在試算表填寫的內容不會被重新載入或覆蓋。'
-      :(r.emptyDraft?'已建立這份問卷的空白修改草稿，並綁定原問卷 ID。請從題目工作表第 6 列開始新增第一題；原問卷及歷史回覆沒有修改。':'已建立這份問卷專屬的修改草稿。原問卷及歷史回覆沒有修改。');
+      :'已建立這份問卷專屬的修改草稿。原問卷及歷史回覆沒有修改。';
     showModal(`<h3>${r.reused?'已開啟既有修改草稿':'已建立既有問卷修改草稿'}</h3><div class="notice success">${esc(r.message||reuseNote)}</div><p>原問卷：<b>${esc(r.title||survey.title)}</b><br>目前狀態：${esc(r.status||survey.status)}<br>歷史回覆：${Number(r.responseCount||survey.responseCount||0)} 份</p><div class="notice">${esc(reuseNote)}<br><br>修改完成後，可按「檢查修改並更新原問卷」，先查看新增、修改及刪除項目，再確認套用。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url||r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-green" onclick="importSpreadsheetSurveyDraft('${esc(r.draftId)}')">檢查修改並更新原問卷</button><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){
     showModal(`<h3>無法開啟試算表修改</h3><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err&&err.message?err.message:String(err))}</div><p class="small muted">如果這份問卷已有工作表不完整的舊草稿，請先到試算表草稿管理清除該筆幽靈草稿，再重新進入試算表編輯。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">前往試算表草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
@@ -1298,10 +1302,6 @@ async function importSpreadsheetSurveyDraft(draftId){
   let importCompleted=false;
   try{
     const preview=await api('previewSurveySheetImport',state.token,draftId);
-    if(preview.mode==='EDIT'&&Number(preview.newQuestionCount||0)===0){
-      showModal(`<h3>這份問卷目前還沒有題目</h3><div class="notice">這是一份綁定原問卷的空白修改草稿。請先開啟題目工作表，從第 6 列開始新增至少一題；完成後再回來檢查並更新原問卷。現在不會修改正式問卷或歷史回覆。</div><button class="btn btn-primary btn-block" onclick="openSheetDraftManager()">返回試算表草稿管理</button>`);
-      return;
-    }
     let message='';
     if(preview.mode==='EDIT'){
       message=`即將更新既有問卷：${preview.oldTitle||preview.title}\n問卷目前狀態：${preview.status}\n歷史回覆：${preview.responseCount} 份\n\n題目數：${preview.oldQuestionCount} → ${preview.newQuestionCount}\n新增題目：${preview.addedQuestions}\n修改題目：${preview.changedQuestions}\n刪除題目：${preview.removedQuestions}\n新增選項：${preview.addedOptions}\n刪除選項：${preview.removedOptions}\n\n系統會先建立完整保護備份，更新後保留原問卷 ID、狀態、結果工作表及歷史回覆。`;
