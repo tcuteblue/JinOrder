@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FFC928">
-  <meta name="jq-pwa-version" content="10.31.0">
+  <meta name="jq-pwa-version" content="10.32.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="真好點">
@@ -452,7 +452,7 @@ function registerCloudFailure(method,args,message){
   state.cloudReadOnlyMode=true;
   state.cloudFailureDismissed=false;
   state.cloudFailureVersion=(Number(state.cloudFailureVersion)||0)+1;
-  state.lastCloudFailure={method:String(method||''),category:category.code,title:category.title,action:category.action,message:String(message||'未提供錯誤內容'),occurredAt:new Date().toISOString(),appVersion:'10.31.0',bridgeReady:!!(state.bridgeReady&&state.bridgePort),online:typeof navigator!=='undefined'?navigator.onLine:null,argCount:Array.isArray(args)?args.length:0};
+  state.lastCloudFailure={method:String(method||''),category:category.code,title:category.title,action:category.action,message:String(message||'未提供錯誤內容'),occurredAt:new Date().toISOString(),appVersion:'10.32.0',bridgeReady:!!(state.bridgeReady&&state.bridgePort),online:typeof navigator!=='undefined'?navigator.onLine:null,argCount:Array.isArray(args)?args.length:0};
   renderCloudFailurePanel();
   setStatus('雲端狀態尚未確認，已啟用唯讀保護',false);
 }
@@ -1234,7 +1234,7 @@ async function selectSurveyForSpreadsheetDraftUi(){
     return;
   }
   const options=surveys.map(s=>`<option value="${esc(s.id)}">${esc(s.title||'未命名問卷')}（${esc(s.status||'')}）</option>`).join('');
-  showModal(`<h3>修改既有問卷草稿</h3><p class="small muted">選擇要修改的正式問卷。系統會載入目前問卷內容，若已經有對應的修改草稿，則直接重用原草稿，不重新載入或覆蓋試算表中的修改。</p><div class="field"><label>選擇正式問卷</label><select id="spreadsheetEditSurveySelect" class="select"><option value="">請選擇一份正式問卷</option>${options}</select></div><div class="notice">這個流程會建立「修改既有問卷」草稿（EDIT），不會把既有「新問卷」草稿改名或覆蓋。原問卷及歷史回覆在你確認更新前都不會變動。</div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetEditDraftSelection()">建立／開啟修改草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
+  showModal(`<h3>修改既有問卷草稿</h3><p class="small muted">選擇要修改的正式問卷。系統會載入目前問卷內容；若該問卷目前沒有題目，也會建立綁定原問卷的空白修改草稿，讓你從第一題開始設計。若已經有對應的修改草稿，則直接重用，不覆蓋試算表中的修改。</p><div class="field"><label>選擇正式問卷</label><select id="spreadsheetEditSurveySelect" class="select"><option value="">請選擇一份正式問卷</option>${options}</select></div><div class="notice">這個流程會建立「修改既有問卷」草稿（EDIT），不會把既有「新問卷」草稿改名或覆蓋。原問卷及歷史回覆在你確認更新前都不會變動。</div><div class="btn-row"><button class="btn btn-primary" onclick="submitSpreadsheetEditDraftSelection()">建立／開啟修改草稿</button><button class="btn btn-plain" onclick="openSheetDraftManager()">取消</button></div>`);
 }
 function submitSpreadsheetEditDraftSelection(){
   const id=String($('spreadsheetEditSurveySelect')?.value||'').trim();
@@ -1254,7 +1254,7 @@ async function loadSurveyToSpreadsheet(id){
     api('listSpreadsheetSurveyDrafts',state.token).then(list=>writeSheetDraftCache(list)).catch(err=>console.warn('背景更新草稿清單略過：',err));
     const reuseNote=r.reused
       ?'已找到這份問卷原本的修改草稿，直接開啟原草稿。你先前在試算表填寫的內容不會被重新載入或覆蓋。'
-      :'已建立這份問卷專屬的修改草稿。原問卷及歷史回覆沒有修改。';
+      :(r.emptyDraft?'已建立這份問卷的空白修改草稿，並綁定原問卷 ID。請從題目工作表第 6 列開始新增第一題；原問卷及歷史回覆沒有修改。':'已建立這份問卷專屬的修改草稿。原問卷及歷史回覆沒有修改。');
     showModal(`<h3>${r.reused?'已開啟既有修改草稿':'已建立既有問卷修改草稿'}</h3><div class="notice success">${esc(r.message||reuseNote)}</div><p>原問卷：<b>${esc(r.title||survey.title)}</b><br>目前狀態：${esc(r.status||survey.status)}<br>歷史回覆：${Number(r.responseCount||survey.responseCount||0)} 份</p><div class="notice">${esc(reuseNote)}<br><br>修改完成後，可按「檢查修改並更新原問卷」，先查看新增、修改及刪除項目，再確認套用。</div><div class="sheet-modal-actions"><a class="btn btn-primary" href="${esc(r.url||r.mainUrl)}" target="_blank" rel="noopener">開啟題目工作表</a><a class="btn btn-secondary" href="${esc(r.customUrl)}" target="_blank" rel="noopener">開啟客製化工作表</a><button class="btn btn-green" onclick="importSpreadsheetSurveyDraft('${esc(r.draftId)}')">檢查修改並更新原問卷</button><button class="btn btn-plain" onclick="openSheetDraftManager()">返回草稿管理</button></div>`);
   }catch(err){
     showModal(`<h3>無法開啟試算表修改</h3><div class="notice error" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err&&err.message?err.message:String(err))}</div><p class="small muted">如果這份問卷已有工作表不完整的舊草稿，請先到試算表草稿管理清除該筆幽靈草稿，再重新進入試算表編輯。</p><div class="sheet-modal-actions"><button class="btn btn-primary" onclick="openSheetDraftManager()">前往試算表草稿管理</button><button class="btn btn-plain" onclick="closeModal()">關閉</button></div>`);
@@ -1298,6 +1298,10 @@ async function importSpreadsheetSurveyDraft(draftId){
   let importCompleted=false;
   try{
     const preview=await api('previewSurveySheetImport',state.token,draftId);
+    if(preview.mode==='EDIT'&&Number(preview.newQuestionCount||0)===0){
+      showModal(`<h3>這份問卷目前還沒有題目</h3><div class="notice">這是一份綁定原問卷的空白修改草稿。請先開啟題目工作表，從第 6 列開始新增至少一題；完成後再回來檢查並更新原問卷。現在不會修改正式問卷或歷史回覆。</div><button class="btn btn-primary btn-block" onclick="openSheetDraftManager()">返回試算表草稿管理</button>`);
+      return;
+    }
     let message='';
     if(preview.mode==='EDIT'){
       message=`即將更新既有問卷：${preview.oldTitle||preview.title}\n問卷目前狀態：${preview.status}\n歷史回覆：${preview.responseCount} 份\n\n題目數：${preview.oldQuestionCount} → ${preview.newQuestionCount}\n新增題目：${preview.addedQuestions}\n修改題目：${preview.changedQuestions}\n刪除題目：${preview.removedQuestions}\n新增選項：${preview.addedOptions}\n刪除選項：${preview.removedOptions}\n\n系統會先建立完整保護備份，更新後保留原問卷 ID、狀態、結果工作表及歷史回覆。`;
